@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠打刻 - 顔認証対応</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body { 
+            text-align: center; 
+            font-family: 'Arial', sans-serif; 
+            background-color: #f8f9fa; 
+        }
+        .container { 
+            padding: 20px; 
+            max-width: 600px; 
+            margin: 0 auto; 
+        }
+        .punch-buttons { 
+            margin-top: 20px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 15px; 
+        }
+        .punch-buttons button {
+            flex-grow: 1; 
+            max-width: 150px; 
+            min-height: 60px;
+            font-size: 1.1em; 
+            border-radius: 8px; 
+            transition: all 0.3s;
+        }
+        .punch-buttons button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+        }
+        .qr-section { 
+            margin-top: 30px; 
+            display: none; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .qr-reader { 
+            width: 100%; 
+            max-width: 400px; 
+            margin: 0 auto; 
+            border: 3px solid #9b4dca; 
+            border-radius: 12px; 
+            overflow: hidden; 
+        }
+        .face-auth-section {
+            margin-top: 20px; 
+            background: white; 
+            padding: 20px;
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .face-video-container {
+            position: relative;
+            width: 100%; 
+            max-width: 350px;
+            margin: 0 auto;
+        }
+        #face-video {
+            width: 100%; 
+            height: 250px;
+            border: 3px solid #007bff;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        .face-overlay {
+            position: absolute;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%;
+            pointer-events: none;
+        }
+        .face-status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .face-detected { background-color: #d4edda; color: #155724; }
+        .face-not-detected { background-color: #fff3cd; color: #856404; }
+        .face-verified { background-color: #d1ecf1; color: #0c5460; }
+        .face-failed { background-color: #f8d7da; color: #721c24; }
+        .similarity-display {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        .message-box {
+            margin-top: 20px; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-weight: bold;
+            animation: slideIn 0.5s ease-out;
+        }
+        .success { background-color: #d4edda; color: #155724; border-left: 5px solid #28a745; }
+        .error {
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border-left: 5px solid #dc3545;
+            animation: shake 0.6s ease-in-out;
+        }
+        .status-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin-bottom: 20px;
+        }
+        .current-time { font-size: 1.5em; margin-bottom: 10px; }
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #9b4dca;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        .face-init-status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .face-init-loading { background-color: #fff3cd; color: #856404; }
+        .face-init-success { background-color: #d4edda; color: #155724; }
+        .face-init-error { background-color: #f8d7da; color: #721c24; }
+        .face-init-disabled { background-color: #e9ecef; color: #6c757d; }
+        .auto-punch-countdown {
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .countdown-number {
+            font-size: 2.5em;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .photo-capture-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: none;
+        }
+        .photo-capturing { background-color: #fff3cd; color: #856404; }
+        .photo-captured { background-color: #d4edda; color: #155724; }
+        .photo-failed { background-color: #f8d7da; color: #721c24; }
+        .photo-preview {
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+        .photo-preview img {
+            max-width: 200px;
+            height: auto;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+        }
+        /* 新規追加: 写真プレビューポップアップ */
+        .photo-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .photo-popup-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+        .photo-popup img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+        }
+        .photo-popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+        }
+        .photo-popup-close:hover {
+            color: #000;
+        }
+        #manual-punch-section {
+            margin-top: 40px; 
+            background: white; 
+            padding: 20px;
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .system-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            background-color: #e9ecef;
+            color: #495057;
+            border-left: 4px solid #007bff;
+        }
+        .debug-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            text-align: left;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 20%, 40%, 60%, 80% { transform: translateX(-10px); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-display">
+            <div class="current-time" id="current-time"></div>
+            <div>勤怠打刻システム - 顔認証対応</div>
+        </div>
+
+        <div id="system-status" class="system-status">
+            システム状況: <span id="system-status-text">待機中</span>
+        </div>
+
+        <div id="face-init-status" class="face-init-status face-init-loading">
+            <div class="loading-spinner"></div>
+            <div>顔認証システムを初期化中...</div>
+        </div>
+
+        <div id="debug-info" class="debug-info" style="display: none;">
+            デバッグ情報: <span id="debug-text"></span>
+        </div>
+
+        <div class="settings-panel">
+            <h3>設定</h3>
+            <div class="setting-item">
+                <span>顔認証を有効にする</span>
+                <label class="toggle">
+                    <input type="checkbox" id="faceAuthEnabled" checked onchange="toggleFaceAuth()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>音声フィードバック</span>
+                <label class="toggle">
+                    <input type="checkbox" id="voiceEnabled" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>顔認証成功時の自動打刻</span>
+                <label class="toggle">
+                    <input type="checkbox" id="autoPunchEnabled" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>写真撮影を有効にする</span>
+                <label class="toggle">
+                    <input type="checkbox" id="photoCaptureEnabled" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span>音声ボリューム</span>
+                <input type="range" id="volumeControl" min="0.1" max="2.0" step="0.1" value="1.0" style="width: 100px;">
+                <span id="volumeDisplay">100%</span>
+            </div>
+            <div class="setting-item">
+                <span>デバッグ情報を表示</span>
+                <label class="toggle">
+                    <input type="checkbox" id="debugEnabled" onchange="toggleDebug()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button id="debug-photo-btn" class="button button-outline" onclick="testPhotoCapture()" style="display: none;">
+                    写真撮影テスト
+                </button>
+            </div>
+        </div>
+
+        <h2>打刻アクションを選択</h2>
+        <div class="punch-buttons">
+            <button class="button button-outline" onclick="startPunch('in')" style="border-color: #28a745; color: #28a745;">
+                <i class="fas fa-sign-in-alt"></i> 出勤
+            </button>
+            <button class="button button-outline" onclick="startPunch('out_personal')" style="border-color: #ffc107; color: #ffc107;">
+                <i class="fas fa-door-open"></i> 退出
+            </button>
+            <button class="button button-outline" onclick="startPunch('in_personal')" style="border-color: #17a2b8; color: #17a2b8;">
+                <i class="fas fa-door-closed"></i> 戻り
+            </button>
+            <button class="button button-outline" onclick="startPunch('out')" style="border-color: #dc3545; color: #dc3545;">
+                <i class="fas fa-sign-out-alt"></i> 退勤
+            </button>
+        </div>
+
+        <div id="qr-section" class="qr-section">
+            <h3>QRコードをスキャンしてください</h3>
+            <div class="qr-reader">
+                <div id="reader"></div>
+            </div>
+            <button onclick="cancelQrScan()" class="button button-outline" style="margin-top: 15px;">
+                <i class="fas fa-times"></i> キャンセル
+            </button>
+        </div>
+
+        <div id="face-auth-section" class="face-auth-section">
+            <h3>顔認証を実行中</h3>
+            <div class="face-video-container">
+                <video id="face-video" autoplay muted playsinline></video>
+                <canvas id="face-overlay" class="face-overlay"></canvas>
+            </div>
+            <div id="face-status" class="face-status face-not-detected">
+                顔を検出中...
+            </div>
+            <div id="similarity-display" class="similarity-display"></div>
+            
+            <div id="photo-capture-status" class="photo-capture-status">
+                写真を撮影中...
+            </div>
+            
+            <div id="photo-preview" class="photo-preview">
+                <div>撮影された写真:</div>
+                <img id="captured-photo" alt="撮影写真">
+            </div>
+            
+            <div id="auto-punch-countdown" class="auto-punch-countdown">
+                自動打刻まで <span id="countdown-number" class="countdown-number">3</span> 秒
+            </div>
+            <div style="margin-top: 15px;">
+                <button id="proceed-btn" onclick="proceedToPunch()" disabled class="button" style="background-color: #28a745;">
+                    <i class="fas fa-check"></i> 打刻実行
+                </button>
+                <button onclick="skipFaceAuth()" class="button button-outline">
+                    <i class="fas fa-skip-forward"></i> 顔認証をスキップ
+                </button>
+                <button onclick="cancelFaceAuth()" class="button button-outline">
+                    <i class="fas fa-times"></i> キャンセル
+                </button>
+            </div>
+        </div>
+
+        <div id="message" class="message-box" style="display:none;"></div>
+
+        <!-- 写真プレビューポップアップ -->
+        <div id="photo-popup" class="photo-popup">
+            <div class="photo-popup-content">
+                <span class="photo-popup-close" onclick="closePhotoPopup()">&times;</span>
+                <h3>撮影写真</h3>
+                <img id="popup-photo" alt="撮影写真">
+                <div style="margin-top: 15px; text-align: center;">
+                    <button onclick="closePhotoPopup()" class="button">閉じる</button>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <div id="manual-punch-section">
+            <h2>手動で打刻</h2>
+            <form id="manual-punch-form">
+                <div class="form-group">
+                    <label for="manual_employee_id">従業員ID:</label>
+                    <input type="text" id="manual_employee_id" required>
+                </div>
+                <div class="form-group">
+                    <label for="manual_action">アクション:</label>
+                    <select id="manual_action" required>
+                        <option value="in">出勤</option>
+                        <option value="out">退勤</option>
+                        <option value="out_personal">退出</option>
+                        <option value="in_personal">戻り</option>
+                    </select>
+                </div>
+                <button type="submit" class="button"><i class="fas fa-clock"></i> 手動打刻</button>
+            </form>
+            <div id="manual-message" class="message-box" style="display:none;"></div>
+        </div>
+    </div>
+
+    <audio id="error-sound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmkaAV2o5PW6Ztx4OxRKnzxnyQ==" type="audio/wav">
+    </audio>
+
+    <script>
+        // グローバル変数の宣言
+        let currentAction = null;
+        let currentEmployeeId = null;
+        let html5QrCode = null;
+        let faceApiLoaded = false;
+        let faceApiInitialized = false;
+        let faceDetectionInterval = null;
+        let currentFaceDescriptor = null;
+        let storedFaceDescriptor = null;
+        let faceVerified = false;
+        let faceSimilarity = 0;
+        let faceCanvas = null;
+        let faceCtx = null;
+        let autoPunchCountdown = null;
+        let currentVolume = 1.0;
+        let isAutoPunchInProgress = false;
+        let faceAuthStarted = false;
+        let lastCapturedPhoto = null;
+        
+        // 修正: 顔認証完了フラグを追加
+        let faceAuthCompleted = false;
+        let faceDetectionStopped = false;
+
+        // DOM要素の参照
+        const faceVideoElement = document.getElementById('face-video');
+        const messageElement = document.getElementById('message');
+        const qrSection = document.getElementById('qr-section');
+        const faceAuthSection = document.getElementById('face-auth-section');
+        const errorSound = document.getElementById('error-sound');
+
+        // 初期化処理
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('システム初期化開始');
+            updateDebug('システム初期化開始');
+            updateSystemStatus('初期化中');
+
+            try {
+                await initializeFaceApi();
+                setupEventListeners();
+                updateCurrentTime();
+                setInterval(updateCurrentTime, 1000);
+                initVolumeControl();
+                
+                // デバッグボタンを表示
+                setTimeout(function() {
+                    document.getElementById('debug-photo-btn').style.display = 'inline-block';
+                }, 2000);
+
+                updateSystemStatus('待機中');
+                console.log('システム初期化完了');
+                updateDebug('システム初期化完了');
+            } catch (error) {
+                console.error('初期化エラー:', error);
+                updateDebug('初期化エラー: ' + error.message);
+            }
+        });
+
+        // システム状況表示
+        function updateSystemStatus(status) {
+            const statusElement = document.getElementById('system-status-text');
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+        }
+
+        // デバッグ機能
+        function updateDebug(message) {
+            const debugDiv = document.getElementById('debug-info');
+            const debugText = document.getElementById('debug-text');
+            if (document.getElementById('debugEnabled').checked && debugDiv && debugText) {
+                debugDiv.style.display = 'block';
+                debugText.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            }
+        }
+
+        function toggleDebug() {
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv) {
+                debugDiv.style.display = document.getElementById('debugEnabled').checked ? 'block' : 'none';
+            }
+        }
+
+        function initVolumeControl() {
+            const volumeControl = document.getElementById('volumeControl');
+            const volumeDisplay = document.getElementById('volumeDisplay');
+
+            if (volumeControl && volumeDisplay) {
+                volumeControl.addEventListener('input', function(e) {
+                    currentVolume = parseFloat(e.target.value);
+                    volumeDisplay.textContent = Math.round(currentVolume * 100) + '%';
+                });
+            }
+        }
+
+        function updateFaceInitStatus(status, message) {
+            const statusDiv = document.getElementById('face-init-status');
+            if (!statusDiv) return;
+            
+            statusDiv.className = 'face-init-status face-init-' + status;
+
+            if (status === 'loading') {
+                statusDiv.innerHTML = '<div class="loading-spinner"></div><div>' + message + '</div>';
+            } else {
+                statusDiv.innerHTML = '<div>' + message + '</div>';
+            }
+
+            if (status === 'success' || status === 'disabled') {
+                setTimeout(function() {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // face-api.js初期化
+        async function initializeFaceApi() {
+            try {
+                console.log('face-api.js初期化開始');
+                updateFaceInitStatus('loading', '顔認証ライブラリを読み込み中...');
+                updateDebug('face-api.js初期化開始');
+
+                let attempts = 0;
+                const maxAttempts = 30;
+
+                while (typeof faceapi === 'undefined' && attempts < maxAttempts) {
+                    console.log('face-api.js読み込み待機中... (' + (attempts + 1) + '/' + maxAttempts + ')');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    attempts++;
+                }
+
+                if (typeof faceapi === 'undefined') {
+                    console.error('face-api.jsの読み込みに失敗しました');
+                    updateFaceInitStatus('error', '顔認証ライブラリの読み込みに失敗しました');
+                    updateDebug('face-api.js読み込み失敗');
+                    return;
+                }
+
+                console.log('face-api.jsライブラリ読み込み完了');
+                updateFaceInitStatus('loading', 'モデルファイルを読み込み中...');
+                updateDebug('モデルファイル読み込み開始');
+
+                try {
+                    const modelBaseUrl = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(modelBaseUrl),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(modelBaseUrl),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(modelBaseUrl)
+                    ]);
+
+                    faceApiLoaded = true;
+                    faceApiInitialized = true;
+
+                    console.log('face-api.js初期化完了');
+                    updateFaceInitStatus('success', '顔認証システムが利用可能になりました');
+                    updateDebug('face-api.js初期化完了');
+
+                } catch (modelError) {
+                    console.warn('CDNからのモデル読み込み失敗、代替手段を試行中...', modelError);
+                    updateDebug('CDNモデル読み込み失敗、代替試行中');
+
+                    try {
+                        updateFaceInitStatus('loading', '代替方法でモデル読み込み中...');
+
+                        await Promise.all([
+                            faceapi.nets.tinyFaceDetector.loadFromUri('/static/models'),
+                            faceapi.nets.faceLandmark68Net.loadFromUri('/static/models'),
+                            faceapi.nets.faceRecognitionNet.loadFromUri('/static/models')
+                        ]);
+
+                        faceApiLoaded = true;
+                        faceApiInitialized = true;
+
+                        console.log('代替方法でface-api.js初期化完了');
+                        updateFaceInitStatus('success', '顔認証システムが利用可能になりました（ローカルモデル使用）');
+                        updateDebug('ローカルモデルで初期化完了');
+
+                    } catch (localError) {
+                        console.error('ローカルモデル読み込みも失敗:', localError);
+
+                        faceApiLoaded = false;
+                        faceApiInitialized = false;
+                        const faceAuthCheckbox = document.getElementById('faceAuthEnabled');
+                        if (faceAuthCheckbox) {
+                            faceAuthCheckbox.checked = false;
+                        }
+
+                        updateFaceInitStatus('disabled', '顔認証機能は無効化されました（モデル読み込み失敗）');
+                        updateDebug('顔認証機能無効化');
+
+                        console.log('顔認証機能を無効化しました。通常の管理機能は利用可能です。');
+                    }
+                }
+
+            } catch (error) {
+                console.error('face-api.js初期化エラー:', error);
+                updateFaceInitStatus('error', '顔認証初期化エラー: ' + error.message);
+                updateDebug('face-api.js初期化エラー: ' + error.message);
+                faceApiLoaded = false;
+                faceApiInitialized = false;
+                const faceAuthCheckbox = document.getElementById('faceAuthEnabled');
+                if (faceAuthCheckbox) {
+                    faceAuthCheckbox.checked = false;
+                }
+            }
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('ja-JP', {
+                timeZone: 'Asia/Tokyo',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // 写真撮影関連の機能
+        function updatePhotoCaptureStatus(status, message) {
+            const statusDiv = document.getElementById('photo-capture-status');
+            if (statusDiv) {
+                statusDiv.className = 'photo-capture-status photo-' + status;
+                statusDiv.textContent = message;
+                statusDiv.style.display = 'block';
+                
+                updateDebug('写真撮影ステータス: ' + status + ' - ' + message);
+                
+                if (status === 'captured' || status === 'failed') {
+                    setTimeout(function() {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+
+        // 修正: 写真プレビューポップアップ表示機能
+        function showPhotoPopup(photoDataUrl) {
+            if (!photoDataUrl) return;
+            
+            const popup = document.getElementById('photo-popup');
+            const popupImg = document.getElementById('popup-photo');
+            
+            if (popup && popupImg) {
+                popupImg.src = photoDataUrl;
+                popup.style.display = 'flex';
+                updateDebug('写真ポップアップ表示');
+                
+                // 3秒後に自動で閉じる
+                setTimeout(function() {
+                    closePhotoPopup();
+                }, 3000);
+            }
+        }
+
+        function closePhotoPopup() {
+            const popup = document.getElementById('photo-popup');
+            if (popup) {
+                popup.style.display = 'none';
+                updateDebug('写真ポップアップ閉じる');
+            }
+        }
+
+        function showPhotoPreview(photoDataUrl) {
+            if (!photoDataUrl) return;
+            
+            const previewDiv = document.getElementById('photo-preview');
+            const imgElement = document.getElementById('captured-photo');
+            
+            if (previewDiv && imgElement) {
+                imgElement.src = photoDataUrl;
+                previewDiv.style.display = 'block';
+                
+                updateDebug('写真プレビュー表示完了');
+                
+                setTimeout(function() {
+                    previewDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // 写真撮影のテスト機能（改良版）
+        function testPhotoCapture() {
+            console.log('=== 写真撮影テスト開始 ===');
+            updateDebug('写真撮影テスト開始');
+            
+            if (!faceVideoElement) {
+                console.error('faceVideoElementが見つかりません');
+                alert('ビデオ要素が見つかりません。まず顔認証画面を開いてからテストしてください。');
+                return;
+            }
+            
+            // ビデオ要素の状態確認
+            console.log('現在のビデオ状態:', {
+                srcObject: !!faceVideoElement.srcObject,
+                videoWidth: faceVideoElement.videoWidth,
+                videoHeight: faceVideoElement.videoHeight,
+                readyState: faceVideoElement.readyState,
+                paused: faceVideoElement.paused,
+                currentTime: faceVideoElement.currentTime
+            });
+            
+            // カメラが開いていない場合は、まずカメラを起動
+            if (!faceVideoElement.srcObject || !faceVideoElement.videoWidth) {
+                alert('カメラが起動していません。\n1. 顔認証画面を開く\n2. カメラの許可を与える\n3. 写真撮影をテスト\nの手順で行ってください。');
+                
+                // 自動的にテスト用のカメラを起動
+                initTestCamera().then(function() {
+                    console.log('テスト用カメラ起動完了');
+                    // 少し待ってから写真撮影を試行
+                    setTimeout(function() {
+                        capturePhotoFromFaceVideo().then(function(result) {
+                            if (result) {
+                                console.log('テスト撮影成功:', result.substring(0, 100) + '...');
+                                showPhotoPopup(result);
+                                alert('写真撮影に成功しました！プレビューを確認してください。');
+                            } else {
+                                console.error('テスト撮影失敗');
+                                alert('写真撮影に失敗しました。コンソールを確認してください。');
+                            }
+                        });
+                    }, 2000);
+                }).catch(function(error) {
+                    console.error('テスト用カメラ起動失敗:', error);
+                    alert('カメラの起動に失敗しました: ' + error.message);
+                });
+                return;
+            }
+            
+            // カメラが既に起動している場合は直接撮影
+            capturePhotoFromFaceVideo().then(function(result) {
+                if (result) {
+                    console.log('テスト撮影成功:', result.substring(0, 100) + '...');
+                    showPhotoPopup(result);
+                    alert('写真撮影に成功しました！プレビューを確認してください。');
+                } else {
+                    console.error('テスト撮影失敗');
+                    alert('写真撮影に失敗しました。コンソールを確認してください。');
+                }
+            });
+        }
+
+        // テスト用カメラ初期化
+        async function initTestCamera() {
+            try {
+                console.log('テスト用カメラ初期化開始');
+                
+                const constraints = {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('テスト用カメラストリーム取得成功');
+
+                faceVideoElement.srcObject = stream;
+
+                // ビデオの準備完了を待つ
+                return new Promise(function(resolve, reject) {
+                    const timeout = setTimeout(function() {
+                        reject(new Error('テスト用ビデオ読み込みタイムアウト'));
+                    }, 10000);
+
+                    faceVideoElement.addEventListener('loadedmetadata', function() {
+                        clearTimeout(timeout);
+                        console.log('テスト用ビデオメタデータ読み込み完了:', {
+                            videoWidth: faceVideoElement.videoWidth,
+                            videoHeight: faceVideoElement.videoHeight
+                        });
+                        
+                        // キャンバスの初期化
+                        if (!faceCanvas) {
+                            faceCanvas = document.getElementById('face-overlay');
+                            faceCtx = faceCanvas.getContext('2d');
+                        }
+                        faceCanvas.width = faceVideoElement.videoWidth;
+                        faceCanvas.height = faceVideoElement.videoHeight;
+                        
+                        resolve();
+                    }, { once: true });
+                    
+                    faceVideoElement.addEventListener('error', function(e) {
+                        clearTimeout(timeout);
+                        reject(new Error('テスト用ビデオ読み込みエラー: ' + e.message));
+                    }, { once: true });
+                });
+
+            } catch (error) {
+                console.error('テスト用カメラ初期化エラー:', error);
+                throw error;
+            }
+        }
+
+        // 修正: 顔認証成功時の写真撮影機能
+        async function capturePhotoOnFaceAuth() {
+            try {
+                updatePhotoCaptureStatus('capturing', '写真を撮影中...');
+                updateDebug('顔認証成功時写真撮影開始');
+                console.log('顔認証時写真撮影開始');
+                
+                if (!faceVideoElement) {
+                    console.error('faceVideoElementが存在しません');
+                    updateDebug('faceVideoElementが存在しません');
+                    updatePhotoCaptureStatus('failed', '写真撮影失敗: カメラが見つかりません');
+                    return;
+                }
+                
+                console.log('ビデオ要素チェック:', {
+                    srcObject: !!faceVideoElement.srcObject,
+                    videoWidth: faceVideoElement.videoWidth,
+                    videoHeight: faceVideoElement.videoHeight,
+                    readyState: faceVideoElement.readyState
+                });
+                
+                // 少し待ってから撮影
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                const photoData = await capturePhotoFromFaceVideo();
+                
+                if (photoData && photoData.length > 1000) {
+                    lastCapturedPhoto = photoData;
+                    updatePhotoCaptureStatus('captured', '写真撮影完了');
+                    showPhotoPreview(photoData);
+                    showPhotoPopup(photoData);  // ポップアップも表示
+                    playPhotoCaptureSound();
+                    
+                    console.log('顔認証時写真撮影成功: ' + Math.round(photoData.length / 1024) + 'KB');
+                    updateDebug('顔認証時写真撮影成功: ' + Math.round(photoData.length / 1024) + 'KB');
+                } else {
+                    console.error('写真データが無効:', photoData ? photoData.length : 'null');
+                    updatePhotoCaptureStatus('failed', '写真撮影に失敗しました');
+                    updateDebug('顔認証時写真撮影失敗: photoDataが無効');
+                }
+                
+            } catch (error) {
+                console.error('顔認証時写真撮影エラー:', error);
+                updatePhotoCaptureStatus('failed', '写真撮影エラー');
+                updateDebug('顔認証時写真撮影エラー: ' + error.message);
+            }
+        }
+
+        function capturePhotoFromFaceVideo() {
+            return new Promise(function(resolve) {
+                try {
+                    console.log('capturePhotoFromFaceVideo開始');
+                    updateDebug('capturePhotoFromFaceVideo実行開始');
+                    
+                    if (!faceVideoElement) {
+                        console.error('faceVideoElementが存在しません');
+                        updateDebug('faceVideoElementが存在しません');
+                        resolve(null);
+                        return;
+                    }
+
+                    console.log('ビデオ要素状態:', {
+                        hasVideo: !!faceVideoElement,
+                        videoWidth: faceVideoElement.videoWidth,
+                        videoHeight: faceVideoElement.videoHeight,
+                        readyState: faceVideoElement.readyState,
+                        srcObject: !!faceVideoElement.srcObject,
+                        paused: faceVideoElement.paused,
+                        ended: faceVideoElement.ended
+                    });
+
+                    if (!faceVideoElement.srcObject) {
+                        console.error('ビデオのsrcObjectがありません');
+                        updateDebug('ビデオのsrcObjectがありません');
+                        resolve(null);
+                        return;
+                    }
+
+                    if (!faceVideoElement.videoWidth || !faceVideoElement.videoHeight) {
+                        console.error('ビデオサイズが無効: width=' + faceVideoElement.videoWidth + ', height=' + faceVideoElement.videoHeight);
+                        updateDebug('ビデオサイズが無効: width=' + faceVideoElement.videoWidth + ', height=' + faceVideoElement.videoHeight);
+                        resolve(null);
+                        return;
+                    }
+
+                    if (faceVideoElement.readyState < 2) {
+                        console.error('ビデオの準備ができていません: readyState=' + faceVideoElement.readyState);
+                        updateDebug('ビデオの準備ができていません: readyState=' + faceVideoElement.readyState);
+                        resolve(null);
+                        return;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = faceVideoElement.videoWidth;
+                    canvas.height = faceVideoElement.videoHeight;
+                    const context = canvas.getContext('2d');
+                    
+                    console.log('キャンバス作成: ' + canvas.width + 'x' + canvas.height);
+                    updateDebug('キャンバスサイズ: ' + canvas.width + 'x' + canvas.height);
+                    
+                    context.drawImage(faceVideoElement, 0, 0, canvas.width, canvas.height);
+                    console.log('ビデオフレームをキャンバスに描画完了');
+                    
+                    // 顔検出枠の追加を試行
+                    if (faceCanvas && currentFaceDescriptor && faceCtx) {
+                        try {
+                            console.log('顔検出枠の追加を試行');
+                            const imageData = faceCtx.getImageData(0, 0, faceCanvas.width, faceCanvas.height);
+                            
+                            let hasContent = false;
+                            for (let i = 3; i < imageData.data.length; i += 4) {
+                                if (imageData.data[i] > 0) {
+                                    hasContent = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (hasContent) {
+                                const tempCanvas = document.createElement('canvas');
+                                tempCanvas.width = faceCanvas.width;
+                                tempCanvas.height = faceCanvas.height;
+                                const tempCtx = tempCanvas.getContext('2d');
+                                tempCtx.putImageData(imageData, 0, 0);
+                                
+                                context.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+                                console.log('顔検出枠を写真に合成しました');
+                                updateDebug('顔検出枠を写真に合成しました');
+                            }
+                        } catch (overlayError) {
+                            console.warn('顔検出枠合成エラー:', overlayError);
+                            updateDebug('顔検出枠合成エラー: ' + overlayError.message);
+                        }
+                    }
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    console.log('JPEG変換完了, サイズ:', dataUrl.length);
+                    
+                    if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 1000) {
+                        console.error('データURL生成に失敗またはサイズが小さすぎます:', dataUrl.length);
+                        updateDebug('データURL生成に失敗');
+                        resolve(null);
+                        return;
+                    }
+                    
+                    console.log('写真データ生成成功: ' + Math.round(dataUrl.length / 1024) + 'KB');
+                    updateDebug('写真データ生成成功: ' + Math.round(dataUrl.length / 1024) + 'KB');
+                    resolve(dataUrl);
+                    
+                } catch (error) {
+                    console.error('顔認証用写真撮影エラー:', error);
+                    updateDebug('写真撮影エラー詳細: ' + error.message);
+                    resolve(null);
+                }
+            });
+        }
+
+        function capturePhoto() {
+            return new Promise(function(resolve) {
+                try {
+                    updateDebug('通常写真撮影開始');
+                    
+                    let video = null;
+                    if (faceVideoElement && faceVideoElement.srcObject && faceVideoElement.videoWidth) {
+                        video = faceVideoElement;
+                        updateDebug('顔認証カメラを使用');
+                    } else {
+                        updateDebug('利用可能なカメラがありません');
+                        resolve(null);
+                        return;
+                    }
+
+                    if (!video.videoWidth || !video.videoHeight || video.readyState < 2) {
+                        updateDebug('ビデオ状態が無効: width=' + video.videoWidth + ', height=' + video.videoHeight + ', readyState=' + video.readyState);
+                        resolve(null);
+                        return;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 1000) {
+                        updateDebug('通常写真撮影: データURL生成失敗');
+                        resolve(null);
+                        return;
+                    }
+                    
+                    updateDebug('通常写真撮影成功: ' + Math.round(dataUrl.length / 1024) + 'KB');
+                    resolve(dataUrl);
+                    
+                } catch (error) {
+                    console.error('通常写真撮影エラー:', error);
+                    updateDebug('通常写真撮影エラー: ' + error.message);
+                    resolve(null);
+                }
+            });
+        }
+
+        function playPhotoCaptureSound() {
+            try {
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+
+                oscillator.frequency.value = 1000;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0, context.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.2 * currentVolume, context.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.1);
+
+                oscillator.start(context.currentTime);
+                oscillator.stop(context.currentTime + 0.1);
+            } catch (error) {
+                console.error('写真撮影音生成失敗:', error);
+            }
+        }
+
+        // 以下、残りの機能を継続...
+        function setupEventListeners() {
+            const manualPunchForm = document.getElementById('manual-punch-form');
+            if (manualPunchForm) {
+                manualPunchForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const manualEmployeeId = form.manual_employee_id.value.trim();
+                    const manualAction = form.manual_action.value;
+
+                    updateDebug('手動打刻開始: ' + manualEmployeeId + ', ' + manualAction);
+                    updateSystemStatus('手動打刻処理中');
+
+                    if (!manualEmployeeId) {
+                        showManualMessage('従業員IDを入力してください', 'error');
+                        playErrorSound();
+                        speak('従業員IDを入力してください');
+                        updateSystemStatus('エラー');
+                        return;
+                    }
+
+                    const consistencyCheck = await checkPunchConsistency(manualEmployeeId, manualAction);
+                    if (!consistencyCheck.success) {
+                        showManualMessage(consistencyCheck.message, 'error');
+                        playErrorSound();
+                        speak(consistencyCheck.message);
+                        updateSystemStatus('エラー');
+                        return;
+                    }
+
+                    const actionNames = {
+                        'in': '出勤',
+                        'out': '退勤',
+                        'out_personal': '退出',
+                        'in_personal': '戻り'
+                    };
+
+                    if (!confirm(consistencyCheck.employee_name + 'さんの' + actionNames[manualAction] + 'を登録しますか？')) {
+                        updateSystemStatus('キャンセル');
+                        return;
+                    }
+
+                    const data = {
+                        employee_id: manualEmployeeId,
+                        action: manualAction
+                    };
+
+                    try {
+                        const response = await fetch('/api/timecard/manual', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                        }
+
+                        const result = await response.json();
+
+                        showManualMessage(result.message, result.success ? 'success' : 'error');
+                        updateDebug('手動打刻結果: ' + (result.success ? '成功' : '失敗'));
+
+                        if (result.success) {
+                            form.reset();
+                            playSuccessSound();
+                            speak(result.voice || result.message);
+                            updateSystemStatus('手動打刻完了');
+                        } else {
+                            playErrorSound();
+                            speak(result.voice || result.message);
+                            updateSystemStatus('手動打刻失敗');
+                        }
+
+                    } catch (error) {
+                        console.error('手動打刻通信エラー:', error);
+                        const errorMessage = '通信エラーが発生しました: ' + error.message;
+                        showManualMessage(errorMessage, 'error');
+                        playErrorSound();
+                        speak('通信エラーが発生しました。ネットワーク接続を確認してください');
+                        updateDebug('手動打刻通信エラー: ' + error.message);
+                        updateSystemStatus('通信エラー');
+                    }
+                });
+            }
+        }
+
+        async function checkPunchConsistency(employeeId, action) {
+            try {
+                const response = await fetch('/api/timecard/check-consistency', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        action: action
+                    })
+                });
+
+                return await response.json();
+            } catch (error) {
+                console.error('整合性チェックエラー:', error);
+                return { success: false, message: '整合性チェック中にエラーが発生しました' };
+            }
+        }
+
+        function showMessage(text, type) {
+            if (messageElement) {
+                messageElement.textContent = text;
+                messageElement.className = 'message-box ' + type;
+                messageElement.style.display = 'block';
+
+                setTimeout(function() {
+                    messageElement.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function showManualMessage(text, type) {
+            const manualMessage = document.getElementById('manual-message');
+            if (manualMessage) {
+                manualMessage.textContent = text;
+                manualMessage.className = 'message-box ' + type;
+                manualMessage.style.display = 'block';
+
+                setTimeout(function() {
+                    manualMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window && document.getElementById('voiceEnabled').checked) {
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ja-JP';
+                utterance.rate = 0.9;
+                utterance.volume = Math.min(1.0, currentVolume);
+
+                utterance.onerror = function(event) {
+                    console.error('音声合成エラー:', event.error);
+                };
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function playErrorSound() {
+            try {
+                if (errorSound) {
+                    errorSound.volume = Math.min(1.0, currentVolume);
+                    errorSound.currentTime = 0;
+                    errorSound.play().catch(e => console.log('音声再生エラー:', e));
+                }
+            } catch (error) {
+                console.error('エラー音声再生失敗:', error);
+            }
+        }
+
+        function playSuccessSound() {
+            try {
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = context.createOscillator();
+                const gainNode = context.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(context.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0, context.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3 * currentVolume, context.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+
+                oscillator.start(context.currentTime);
+                oscillator.stop(context.currentTime + 0.3);
+            } catch (error) {
+                console.error('成功音声生成失敗:', error);
+            }
+        }
+
+        function toggleFaceAuth() {
+            const enabled = document.getElementById('faceAuthEnabled').checked;
+            console.log('顔認証設定:', enabled ? '有効' : '無効');
+            updateDebug('顔認証設定: ' + (enabled ? '有効' : '無効'));
+
+            if (!enabled) {
+                if (!confirm('顔認証を無効にしますか？セキュリティが低下する可能性があります。')) {
+                    document.getElementById('faceAuthEnabled').checked = true;
+                    return;
+                }
+            }
+        }
+
+        function startPunch(action) {
+            currentAction = action;
+            // 修正: 顔認証状態をリセット
+            faceAuthCompleted = false;
+            faceDetectionStopped = false;
+            faceVerified = false;
+            isAutoPunchInProgress = false;
+            lastCapturedPhoto = null;
+            
+            updateDebug('打刻開始: ' + action);
+            updateSystemStatus('QRスキャン待機中');
+            
+            const buttonMessages = {
+                'in': '出勤です',
+                'out': '退勤です',
+                'out_personal': '退出です',
+                'in_personal': '戻りです'
+            };
+
+            speak(buttonMessages[action]);
+            if (qrSection) {
+                qrSection.style.display = 'block';
+            }
+
+            setTimeout(function() {
+                initQrScanner();
+            }, 500);
+        }
+
+        function initQrScanner() {
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    onScanSuccess,
+                    onScanError
+                ).catch(function(err) {
+                    console.error("QRスキャナー開始失敗:", err);
+                    showMessage('カメラの起動に失敗しました', 'error');
+                    playErrorSound();
+                    updateSystemStatus('カメラエラー');
+                });
+            } catch (error) {
+                console.error("QRスキャナー初期化失敗:", error);
+                showMessage('QRスキャナーの初期化に失敗しました', 'error');
+                playErrorSound();
+                updateSystemStatus('初期化エラー');
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log('QRコード読み取り成功: ' + decodedText);
+            updateDebug('QRコード読み取り: ' + decodedText);
+            updateSystemStatus('QRコード処理中');
+            currentEmployeeId = decodedText;
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(function() {
+                    console.log("QRコードスキャン停止");
+                }).catch(function(err) {
+                    console.error("QRスキャナー停止失敗:", err);
+                });
+            }
+
+            if (qrSection) {
+                qrSection.style.display = 'none';
+            }
+            
+            updateSystemStatus('顔認証準備中');
+
+            // 修正: 顔認証の開始判定
+            if (document.getElementById('faceAuthEnabled').checked && faceApiInitialized) {
+                updateDebug('顔認証開始');
+                startFaceAuth(decodedText);
+            } else if (document.getElementById('faceAuthEnabled').checked && !faceApiInitialized) {
+                updateDebug('顔認証システム未初期化');
+                if (confirm('顔認証システムがまだ初期化されていません。顔認証をスキップして打刻を続行しますか？')) {
+                    sendPunch(decodedText, currentAction, false);
+                } else {
+                    showMessage('顔認証システムの初期化をお待ちください', 'error');
+                }
+            } else {
+                updateDebug('顔認証スキップして直接打刻');
+                sendPunch(decodedText, currentAction, false);
+            }
+        }
+
+        function onScanError(err) {
+            // QRコード読み取りエラーは通常の動作
+        }
+
+        function cancelQrScan() {
+            console.log('QRスキャンキャンセル選択');
+            updateDebug('QRスキャンキャンセル');
+            updateSystemStatus('キャンセル中');
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(function() {
+                    console.log("QRコードスキャン停止");
+                    updateDebug('QRコードスキャン停止');
+                }).catch(function(err) {
+                    console.error("QRスキャナー停止失敗:", err);
+                    updateDebug('QRスキャナー停止失敗: ' + err.message);
+                });
+            }
+
+            if (qrSection) {
+                qrSection.style.display = 'none';
+            }
+            
+            updateSystemStatus('待機中');
+        }
+
+        // 修正: 顔認証関連の機能を追加
+        async function startFaceAuth(employeeId) {
+            try {
+                console.log('顔認証開始: ' + employeeId);
+                updateDebug('顔認証開始: ' + employeeId);
+                updateSystemStatus('顔認証中');
+
+                if (!faceApiInitialized) {
+                    throw new Error('顔認証システムが初期化されていません');
+                }
+
+                // 顔データの確認
+                const response = await fetch('/api/face/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        face_descriptor: []
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    if (result.needs_registration) {
+                        updateDebug('顔データ未登録');
+                        if (confirm('顔データが未登録です。顔認証をスキップして打刻しますか？')) {
+                            await sendPunch(employeeId, currentAction, false);
+                        }
+                        return;
+                    } else {
+                        showMessage(result.message, 'error');
+                        playErrorSound();
+                        return;
+                    }
+                }
+
+                storedFaceDescriptor = new Float32Array(result.stored_descriptor);
+                updateDebug('顔データ取得完了');
+
+                if (faceAuthSection) {
+                    faceAuthSection.style.display = 'block';
+                }
+                faceAuthStarted = true;
+                faceAuthCompleted = false;
+
+                await initFaceCamera();
+                await startFaceDetection();
+
+                console.log('顔認証準備完了');
+                updateDebug('顔認証準備完了');
+
+            } catch (error) {
+                console.error('顔認証開始エラー:', error);
+                updateDebug('顔認証開始エラー: ' + error.message);
+                showMessage('顔認証エラー: ' + error.message, 'error');
+                playErrorSound();
+                updateSystemStatus('顔認証エラー');
+
+                if (confirm('顔認証でエラーが発生しました。顔認証をスキップして打刻しますか？')) {
+                    await sendPunch(employeeId, currentAction, false);
+                }
+            }
+        }
+
+        async function initFaceCamera() {
+            try {
+                updateDebug('顔認証カメラ初期化開始');
+                console.log('顔認証カメラ初期化開始');
+                
+                faceCanvas = document.getElementById('face-overlay');
+                faceCtx = faceCanvas.getContext('2d');
+
+                const constraints = {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640, min: 320, max: 1280 },
+                        height: { ideal: 480, min: 240, max: 720 },
+                        frameRate: { ideal: 30, min: 15 }
+                    }
+                };
+
+                console.log('getUserMediaリクエスト中...');
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('カメラストリーム取得成功');
+
+                faceVideoElement.srcObject = stream;
+
+                await new Promise(function(resolve, reject) {
+                    const timeout = setTimeout(function() {
+                        reject(new Error('ビデオ読み込みタイムアウト (10秒)'));
+                    }, 10000);
+
+                    faceVideoElement.addEventListener('loadedmetadata', function() {
+                        clearTimeout(timeout);
+                        console.log('ビデオメタデータ読み込み完了:', {
+                            videoWidth: faceVideoElement.videoWidth,
+                            videoHeight: faceVideoElement.videoHeight,
+                            duration: faceVideoElement.duration
+                        });
+                        updateDebug('ビデオメタデータ読み込み完了: ' + faceVideoElement.videoWidth + 'x' + faceVideoElement.videoHeight);
+                        
+                        faceCanvas.width = faceVideoElement.videoWidth;
+                        faceCanvas.height = faceVideoElement.videoHeight;
+                        
+                        console.log('キャンバスサイズ設定:', { width: faceCanvas.width, height: faceCanvas.height });
+                        updateDebug('キャンバスサイズ設定: ' + faceCanvas.width + 'x' + faceCanvas.height);
+                        resolve();
+                    }, { once: true });
+                    
+                    faceVideoElement.addEventListener('error', function(e) {
+                        clearTimeout(timeout);
+                        reject(new Error('ビデオ読み込みエラー: ' + e.message));
+                    }, { once: true });
+                });
+
+                await new Promise(function(resolve, reject) {
+                    const timeout = setTimeout(function() {
+                        reject(new Error('ビデオ再生準備タイムアウト (5秒)'));
+                    }, 5000);
+
+                    if (faceVideoElement.readyState >= 3) {
+                        clearTimeout(timeout);
+                        console.log('ビデオ再生準備完了（既に準備済み）');
+                        updateDebug('ビデオ再生準備完了（既に準備済み）');
+                        resolve();
+                        return;
+                    }
+                    
+                    faceVideoElement.addEventListener('canplay', function() {
+                        clearTimeout(timeout);
+                        console.log('ビデオ再生準備完了');
+                        updateDebug('ビデオ再生可能状態');
+                        resolve();
+                    }, { once: true });
+                });
+
+                console.log('カメラ初期化最終確認:', {
+                    readyState: faceVideoElement.readyState,
+                    videoWidth: faceVideoElement.videoWidth,
+                    videoHeight: faceVideoElement.videoHeight,
+                    paused: faceVideoElement.paused,
+                    ended: faceVideoElement.ended,
+                    currentTime: faceVideoElement.currentTime
+                });
+
+                console.log('顔認証カメラ初期化完了');
+                updateDebug('顔認証カメラ初期化完了');
+
+            } catch (error) {
+                console.error('顔認証カメラ初期化エラー:', error);
+                updateDebug('カメラ初期化エラー: ' + error.message);
+                throw error;
+            }
+        }
+
+        // 修正: 顔検出機能の改良
+        async function startFaceDetection() {
+            if (!faceApiInitialized || !faceVideoElement || faceDetectionStopped) return;
+
+            updateDebug('顔検出開始');
+
+            faceDetectionInterval = setInterval(async function() {
+                try {
+                    // 修正: 既に認証完了していたら検出を停止
+                    if (faceAuthCompleted || faceDetectionStopped) {
+                        clearInterval(faceDetectionInterval);
+                        return;
+                    }
+
+                    const detection = await faceapi
+                        .detectSingleFace(faceVideoElement, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+
+                    if (faceCtx && faceCanvas) {
+                        faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+                    }
+
+                    if (detection) {
+                        const box = detection.detection.box;
+                        const scaleX = faceCanvas.width / faceVideoElement.videoWidth;
+                        const scaleY = faceCanvas.height / faceVideoElement.videoHeight;
+
+                        faceCtx.strokeStyle = '#00ff00';
+                        faceCtx.lineWidth = 3;
+                        faceCtx.strokeRect(
+                            box.x * scaleX,
+                            box.y * scaleY,
+                            box.width * scaleX,
+                            box.height * scaleY
+                        );
+
+                        currentFaceDescriptor = detection.descriptor;
+
+                        if (storedFaceDescriptor && !faceAuthCompleted) {
+                            const distance = faceapi.euclideanDistance(currentFaceDescriptor, storedFaceDescriptor);
+                            faceSimilarity = Math.max(0, 1 - distance);
+
+                            const threshold = 0.6;
+                            const verified = faceSimilarity >= threshold;
+
+                            updateFaceStatus(verified, faceSimilarity);
+                            
+                            // 修正: 認証成功時の処理
+                            if (verified && !faceAuthCompleted) {
+                                faceAuthCompleted = true;
+                                faceDetectionStopped = true;
+                                clearInterval(faceDetectionInterval);
+                                
+                                console.log('顔認証成功、検出停止');
+                                updateDebug('顔認証成功、検出停止');
+                                
+                                // 写真撮影
+                                if (document.getElementById('photoCaptureEnabled').checked) {
+                                    await capturePhotoOnFaceAuth();
+                                }
+                                
+                                // 自動打刻の判定
+                                if (document.getElementById('autoPunchEnabled').checked && !isAutoPunchInProgress) {
+                                    updateDebug('自動打刻カウントダウン開始条件満たしました');
+                                    setTimeout(function() {
+                                        startAutoPunchCountdown();
+                                    }, 1000);
+                                }
+                            }
+                        }
+                    } else {
+                        currentFaceDescriptor = null;
+                        if (!faceAuthCompleted) {
+                            updateFaceStatus(false, 0);
+                        }
+                    }
+                } catch (error) {
+                    console.error('顔検出エラー:', error);
+                    if (!faceAuthCompleted) {
+                        updateDebug('顔検出エラー: ' + error.message);
+                    }
+                }
+            }, 500);
+        }
+
+        // 修正: 顔認証状態更新機能
+        function updateFaceStatus(verified, similarity) {
+            const statusDiv = document.getElementById('face-status');
+            const similarityDiv = document.getElementById('similarity-display');
+            const proceedBtn = document.getElementById('proceed-btn');
+
+            updateDebug('顔認証状態更新: verified=' + verified + ', similarity=' + similarity.toFixed(2));
+
+            if (currentFaceDescriptor) {
+                if (verified) {
+                    if (statusDiv) statusDiv.textContent = '✅ 顔認証成功';
+                    if (statusDiv) statusDiv.className = 'face-status face-verified';
+                    if (similarityDiv) similarityDiv.textContent = '類似度: ' + (similarity * 100).toFixed(1) + '%';
+                    if (proceedBtn) proceedBtn.disabled = false;
+                    faceVerified = true;
+
+                    console.log('顔認証成功');
+                    updateDebug('顔認証成功: 類似度 ' + (similarity * 100).toFixed(1) + '%');
+                    
+                } else {
+                    if (statusDiv) statusDiv.textContent = '❌ 顔認証失敗';
+                    if (statusDiv) statusDiv.className = 'face-status face-failed';
+                    if (similarityDiv) similarityDiv.textContent = '類似度: ' + (similarity * 100).toFixed(1) + '% (閾値: 60%)';
+                    if (proceedBtn) proceedBtn.disabled = true;
+                    faceVerified = false;
+                }
+            } else {
+                if (!faceAuthCompleted) {
+                    if (statusDiv) statusDiv.textContent = '😊 顔を検出中...';
+                    if (statusDiv) statusDiv.className = 'face-status face-not-detected';
+                    if (similarityDiv) similarityDiv.textContent = '';
+                    if (proceedBtn) proceedBtn.disabled = true;
+                    faceVerified = false;
+                }
+            }
+        }
+
+        function stopFaceDetection() {
+            faceDetectionStopped = true;
+            
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+                updateDebug('顔検出停止');
+            }
+
+            if (faceCtx && faceCanvas) {
+                faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+            }
+
+            if (faceVideoElement && faceVideoElement.srcObject) {
+                faceVideoElement.srcObject.getTracks().forEach(function(track) {
+                    track.stop();
+                });
+                faceVideoElement.srcObject = null;
+            }
+        }
+
+        function startAutoPunchCountdown() {
+            if (isAutoPunchInProgress || !faceAuthCompleted) {
+                updateDebug('自動打刻既に進行中のためスキップ');
+                return;
+            }
+
+            const countdownDiv = document.getElementById('auto-punch-countdown');
+            const countdownNumber = document.getElementById('countdown-number');
+
+            if (countdownDiv && countdownNumber) {
+                isAutoPunchInProgress = true;
+                countdownDiv.style.display = 'block';
+                let countdown = 3;
+                countdownNumber.textContent = countdown;
+
+                console.log('自動打刻カウントダウン開始:', countdown);
+                updateDebug('自動打刻カウントダウン開始: ' + countdown + '秒');
+                speak('顔認証成功。3秒後に自動打刻します');
+
+                autoPunchCountdown = setInterval(function() {
+                    countdown--;
+                    countdownNumber.textContent = countdown;
+                    console.log('カウントダウン:', countdown);
+                    updateDebug('カウントダウン: ' + countdown);
+
+                    if (countdown <= 0) {
+                        console.log('自動打刻実行トリガー');
+                        updateDebug('自動打刻実行');
+                        clearInterval(autoPunchCountdown);
+                        countdownDiv.style.display = 'none';
+                        isAutoPunchInProgress = false;
+                        executeAutoPunch();
+                    }
+                }, 1000);
+            }
+        }
+
+        function executeAutoPunch() {
+            updateDebug('executeAutoPunch実行開始');
+
+            if (!currentEmployeeId || !currentAction) {
+                updateDebug('自動打刻エラー: 必要な情報が不足');
+                console.error('自動打刻エラー: 従業員IDまたはアクションが設定されていません');
+                isAutoPunchInProgress = false;
+                updateSystemStatus('自動打刻エラー');
+                return;
+            }
+
+            if (!faceVerified || !faceAuthCompleted) {
+                updateDebug('自動打刻エラー: 顔認証未完了');
+                console.error('自動打刻エラー: 顔認証が完了していません');
+                isAutoPunchInProgress = false;
+                updateSystemStatus('顔認証エラー');
+                return;
+            }
+
+            updateDebug('自動打刻実行: ' + currentEmployeeId + ', ' + currentAction);
+            updateSystemStatus('自動打刻実行中');
+            sendPunch(currentEmployeeId, currentAction, faceVerified, faceSimilarity);
+        }
+
+        async function sendPunch(employeeId, action, useFaceAuth, similarity) {
+            try {
+                console.log('打刻通信開始:', { employeeId: employeeId, action: action, useFaceAuth: useFaceAuth, similarity: similarity });
+                updateDebug('打刻通信開始: ' + employeeId + ', ' + action + ', 顔認証: ' + useFaceAuth);
+                updateSystemStatus('打刻データ送信中');
+
+                const consistencyCheck = await checkPunchConsistency(employeeId, action);
+                if (!consistencyCheck.success) {
+                    showMessage(consistencyCheck.message, 'error');
+                    playErrorSound();
+                    speak(consistencyCheck.message);
+                    updateDebug('打刻整合性チェック失敗: ' + consistencyCheck.message);
+                    updateSystemStatus('整合性エラー');
+                    resetFaceAuthSystem();
+                    return;
+                }
+
+                let photoData = null;
+                
+                if (document.getElementById('photoCaptureEnabled').checked) {
+                    updateDebug('写真撮影開始');
+                    
+                    if (useFaceAuth && lastCapturedPhoto) {
+                        photoData = lastCapturedPhoto;
+                        updateDebug('既存撮影写真使用: ' + Math.round(photoData.length / 1024) + 'KB');
+                    } else {
+                        photoData = await capturePhoto();
+                        if (photoData) {
+                            updateDebug('新規写真撮影成功: ' + Math.round(photoData.length / 1024) + 'KB');
+                        } else {
+                            updateDebug('写真撮影失敗またはスキップ');
+                        }
+                    }
+                } else {
+                    updateDebug('写真撮影設定が無効');
+                }
+
+                const requestData = {
+                    employee_id: employeeId,
+                    action: action,
+                    photo: photoData
+                };
+
+                if (useFaceAuth) {
+                    requestData.face_verified = faceVerified;
+                    requestData.face_similarity = similarity;
+                }
+
+                updateDebug('打刻API呼び出し開始');
+                const response = await fetch('/api/timecard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+                updateDebug('打刻API結果: ' + (result.success ? '成功' : '失敗'));
+
+                if (result.success) {
+                    let message = useFaceAuth
+                        ? result.message + ' (類似度: ' + (similarity * 100).toFixed(1) + '%)'
+                        : result.message;
+
+                    if (result.photo_saved) {
+                        message += ' 📷';
+                        updateDebug('写真保存確認済み');
+                    } else if (photoData) {
+                        message += ' (写真保存失敗)';
+                        updateDebug('写真保存失敗');
+                    } else {
+                        message += ' (写真なし)';
+                        updateDebug('写真保存なし');
+                    }
+
+                    showMessage(message, 'success');
+                    playSuccessSound();
+                    speak(result.voice || result.message);
+                    updateSystemStatus('打刻完了');
+                } else {
+                    showMessage(result.message, 'error');
+                    playErrorSound();
+                    updateSystemStatus('打刻失敗');
+                    speak(result.voice || result.message);
+                }
+
+                // 打刻完了後にシステムをリセット
+                resetFaceAuthSystem();
+
+            } catch (error) {
+                console.error('打刻通信エラー:', error);
+                updateDebug('打刻通信エラー: ' + error.message);
+                showMessage('通信エラーが発生しました', 'error');
+                playErrorSound();
+                speak('通信エラーが発生しました');
+                updateSystemStatus('通信エラー');
+                resetFaceAuthSystem();
+            }
+        }
+
+        // 修正: システムリセット機能
+        function resetFaceAuthSystem() {
+            updateDebug('顔認証システムリセット');
+            
+            // 顔認証関連の状態をリセット
+            faceAuthCompleted = false;
+            faceDetectionStopped = false;
+            faceVerified = false;
+            isAutoPunchInProgress = false;
+            faceAuthStarted = false;
+            lastCapturedPhoto = null;
+            currentFaceDescriptor = null;
+            storedFaceDescriptor = null;
+            faceSimilarity = 0;
+            
+            // カウントダウンを停止
+            if (autoPunchCountdown) {
+                clearInterval(autoPunchCountdown);
+                autoPunchCountdown = null;
+            }
+            
+            // UI要素を非表示
+            const countdownDiv = document.getElementById('auto-punch-countdown');
+            if (countdownDiv) {
+                countdownDiv.style.display = 'none';
+            }
+            
+            const photoPreview = document.getElementById('photo-preview');
+            if (photoPreview) {
+                photoPreview.style.display = 'none';
+            }
+            
+            const photoCaptureStatus = document.getElementById('photo-capture-status');
+            if (photoCaptureStatus) {
+                photoCaptureStatus.style.display = 'none';
+            }
+            
+            // 顔認証画面を非表示
+            if (faceAuthSection) {
+                faceAuthSection.style.display = 'none';
+            }
+            
+            // 顔検出を停止
+            stopFaceDetection();
+            
+            // グローバル変数をリセット
+            currentAction = null;
+            currentEmployeeId = null;
+            
+            setTimeout(function() {
+                updateSystemStatus('待機中');
+            }, 2000);
+        }
+
+        function proceedToPunch() {
+            console.log('proceedToPunch実行開始');
+            updateDebug('proceedToPunch実行開始');
+            updateSystemStatus('打刻処理中');
+
+            if (document.getElementById('autoPunchEnabled').checked && !faceVerified) {
+                updateDebug('自動打刻モードで顔認証未完了');
+                showMessage('顔認証が完了していません', 'error');
+                updateSystemStatus('顔認証エラー');
+                return;
+            }
+
+            stopFaceDetection();
+            if (faceAuthSection) {
+                faceAuthSection.style.display = 'none';
+            }
+
+            updateDebug('打刻実行: ' + currentEmployeeId + ', ' + currentAction + ', 顔認証: ' + faceVerified);
+            sendPunch(currentEmployeeId, currentAction, faceVerified, faceSimilarity);
+        }
+
+        function skipFaceAuth() {
+            updateDebug('顔認証スキップ選択');
+            if (confirm('顔認証をスキップして打刻しますか？')) {
+                updateSystemStatus('顔認証スキップ');
+                stopFaceDetection();
+                if (faceAuthSection) {
+                    faceAuthSection.style.display = 'none';
+                }
+                sendPunch(currentEmployeeId, currentAction, false);
+            }
+        }
+
+        function cancelFaceAuth() {
+            console.log('顔認証キャンセル');
+            updateDebug('顔認証キャンセル');
+            updateSystemStatus('キャンセル');
+            resetFaceAuthSystem();
+        }
+
+        // ページ可視性管理
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (html5QrCode && html5QrCode.pause) {
+                    html5QrCode.pause().catch(function(e) {
+                        console.log('QRスキャナー一時停止エラー:', e);
+                    });
+                }
+                stopFaceDetection();
+            } else if (!document.hidden) {
+                if (html5QrCode && html5QrCode.resume && qrSection && qrSection.style.display === 'block') {
+                    html5QrCode.resume().catch(function(e) {
+                        console.log('QRスキャナー再開エラー:', e);
+                    });
+                }
+                if (faceAuthSection && faceAuthSection.style.display === 'block' && !faceAuthCompleted) {
+                    startFaceDetection();
+                }
+            }
+        });
+
+        // ページ離脱時のクリーンアップ
+        window.addEventListener('beforeunload', function() {
+            if (html5QrCode) {
+                html5QrCode.stop().catch(function(e) {
+                    console.log('QRスキャナー停止エラー:', e);
+                });
+            }
+            stopFaceDetection();
+        });
+
+        // エラーハンドリング
+        window.addEventListener('error', function(event) {
+            console.error('グローバルエラー:', event.error);
+            updateDebug('グローバルエラー: ' + event.error.message);
+        });
+    </script>
+</body>
+</html>
