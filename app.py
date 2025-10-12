@@ -192,8 +192,10 @@ punch_validator = PunchValidator()
 # === データベース関数 ===
 
 def get_db_connection() -> sqlite3.Connection:
-    # Azure App Service用：データベースファイルのパスを調整
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'timecard.db')
+    # Azure App Service用：永続ストレージに対応したパスに修正
+    # /home ディレクトリは永続化されるため、ここにDBを置く
+    home_dir = os.environ.get('HOME', '/tmp') 
+    db_path = os.path.join(home_dir, 'timecard.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -1946,4 +1948,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
