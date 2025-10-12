@@ -1,3 +1,10 @@
+# ===================================================
+print("コードが正常に更新されました。永続化設定を確認します。")
+# ===================================================
+
+import sqlite3
+import hashlib
+# ... (以降のコードはそのまま)
 import sqlite3
 import hashlib
 from datetime import datetime, timedelta
@@ -1962,6 +1969,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
