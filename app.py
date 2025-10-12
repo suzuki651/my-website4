@@ -18,8 +18,11 @@ from email.mime.multipart import MIMEMultipart
 import pytz
 from enum import Enum
 
+from config import Config
+
 # Azure App Service用の環境変数読み込み
 app = Flask(__name__)
+app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_super_secret_key_change_in_production')
 app.config['QR_FOLDER'] = 'static/qrcodes'
 app.config['PHOTO_FOLDER'] = 'static/photos'
@@ -1943,3 +1946,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
