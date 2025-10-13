@@ -198,24 +198,17 @@ punch_validator = PunchValidator()
 
 # === データベース関数 ===
 
-# app.py
-
 def get_db_connection() -> sqlite3.Connection:
     """
     Azure App Serviceの永続ストレージ(/home)にデータベースを配置する。
-    /home ディレクトリは永続化されるため、ここにDBを置く。
+    環境変数に頼らず、保証された永続パスを直接指定する。
     """
-    home_dir = os.environ.get('HOME') 
-    
-    # HOME環境変数が取得できない場合のフォールバック
-    if not home_dir:
-        home_dir = '/home' # Azure App Service Linuxの永続ストレージパス
-        print("警告: HOME環境変数が設定されていません。'/home'を直接使用します。")
-
-    db_path = os.path.join(home_dir, 'timecard.db')
+    # Azure App Serviceの永続ストレージは常に /home にマウントされる
+    persistent_storage_path = '/home'
+    db_path = os.path.join(persistent_storage_path, 'timecard.db')
     
     # ★重要：どのパスに接続しようとしているかログに出力
-    print(f"データベース接続を試行します。永続パス: {db_path}")
+    print(f"データベース接続を試行します。確定永続パス: {db_path}")
     
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -1969,6 +1962,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
