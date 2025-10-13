@@ -31,8 +31,9 @@ from config import Config
 app = Flask(__name__)
 app.config.from_object(Config)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_super_secret_key_change_in_production')
-app.config['QR_FOLDER'] = 'static/qrcodes'
-app.config['PHOTO_FOLDER'] = 'static/photos'
+PERSISTENT_STORAGE_PATH = '/home'
+app.config['QR_FOLDER'] = os.path.join(PERSISTENT_STORAGE_PATH, 'static/qrcodes')
+app.config['PHOTO_FOLDER'] = os.path.join(PERSISTENT_STORAGE_PATH, 'static/photos')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # 日本時間の設定
@@ -1962,6 +1963,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
