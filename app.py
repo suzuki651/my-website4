@@ -1472,6 +1472,19 @@ def export_monthly_report():
     if df.empty:
         return jsonify({'error': 'No data for this month'}), 404
 
+    def clean_timestamp_format(ts_str):
+        """ 'YYYY-MM-DD HH:MM:SS:ms' を 'YYYY-MM-DD HH:MM:SS.ms' に変換する """
+        if isinstance(ts_str, str) and ts_str.count(':') > 2:
+            # 文字列の最後のコロンだけをピリオドに置換する
+            parts = ts_str.rpartition(':')
+            return parts[0] + '.' + parts[2]
+        return ts_str
+
+    # タイムスタンプ文字列をクリーンな形式に変換
+    df['timestamp'] = df['timestamp'].apply(clean_timestamp_format)
+
+    # クリーンになった文字列をdatetimeオブジェクトに変換
+    # この行は元のコードと同じですが、上記の処理の後に実行します
     df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed')
     df['date'] = df['timestamp'].dt.date
     df['time'] = df['timestamp'].dt.time
@@ -1963,6 +1976,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
