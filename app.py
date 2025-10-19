@@ -1472,7 +1472,7 @@ def export_monthly_report():
     if df.empty:
         return jsonify({'error': 'No data for this month'}), 404
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format='mixed')
     df['date'] = df['timestamp'].dt.date
     df['time'] = df['timestamp'].dt.time
 
@@ -1963,6 +1963,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
 
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
