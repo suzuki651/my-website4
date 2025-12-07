@@ -1,0 +1,77 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'tmsystem'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: .
+
+    - name: Set Azure environment variables
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: 'tmsystem'
+        app-settings-json: |
+          [
+            {
+              "name": "SECRET_KEY",
+              "value": "${{ secrets.SECRET_KEY }}",
+              "slotSetting": false
+            },
+            {
+              "name": "FLASK_ENV",
+              "value": "${{ secrets.FLASK_ENV }}",
+              "slotSetting": false
+            },
+            {
+              "name": "SMTP_SERVER",
+              "value": "${{ secrets.SMTP_SERVER }}",
+              "slotSetting": false
+            },
+            {
+              "name": "SMTP_PORT",
+              "value": "${{ secrets.SMTP_PORT }}",
+              "slotSetting": false
+            },
+            {
+              "name": "EMAIL_USERNAME",
+              "value": "${{ secrets.EMAIL_USERNAME }}",
+              "slotSetting": false
+            },
+            {
+              "name": "EMAIL_PASSWORD",
+              "value": "${{ secrets.EMAIL_PASSWORD }}",
+              "slotSetting": false
+            },
+            {
+              "name": "ADMIN_EMAIL",
+              "value": "${{ secrets.ADMIN_EMAIL }}",
+              "slotSetting": false
+            }
+          ]
+      env:
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
