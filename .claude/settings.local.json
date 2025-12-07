@@ -4,7 +4,15 @@
       "Bash(python:*)",
       "Bash(cat:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nセキュリティ強化とコード品質改善\n\n主な変更:\n- パスワードハッシュ化をpbkdf2:sha256に強化\n- SECRET_KEY検証の追加\n- ADMIN_EMAILのハードコードを削除\n- ロギングシステムの統一\n- 全セキュリティ問題を修正\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(cmd /c open_github_secrets.bat)",
+      "Bash(powershell:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
