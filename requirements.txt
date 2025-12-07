@@ -1,0 +1,21 @@
+# Web Framework
+Flask==3.0.3
+Flask-Login==0.6.3
+Werkzeug==3.0.3
+
+# QR Code
+qrcode==7.4.2
+
+# Data Processing
+numpy==1.26.4
+pandas==2.2.2
+
+# Image Processing
+Pillow==10.3.0
+
+# Excel
+openpyxl==3.1.2
+
+# Environment and Utilities
+python-dotenv==1.0.1
+pytz==2024.1

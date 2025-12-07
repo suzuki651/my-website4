@@ -1,0 +1,27 @@
+# 環境設定ファイル
+.env
+*.env
+
+# データベース
+*.db
+*.sqlite3
+timecard.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# 一時ファイル
+*.log
+.DS_Store
+Thumbs.db
+
+# アップロードファイル
+static/photos/*
+!static/photos/.gitkeep

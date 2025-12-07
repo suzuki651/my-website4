@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤怠管理システム - 管理画面</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 20px;
+            border-bottom: 2px solid #9b4dca;
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .button-group button {
+            flex-grow: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 4px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-size: 0.9em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .break-times {
+            font-size: 0.7em;
+            color: #666;
+        }
+
+        .login-options {
+            margin-top: 15px;
+        }
+
+        .login-options a {
+            color: #9b4dca;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .login-options a:hover {
+            text-decoration: underline;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .danger-button {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .danger-button:hover {
+            background-color: #c82333;
+        }
+
+        .warning-text {
+            color: #856404;
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .form-inline {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .form-inline .form-group {
+            margin-bottom: 0;
+        }
+
+        #daily-summary-table {
+            font-size: 0.7em;
+        }
+
+        #daily-summary-table th,
+        #daily-summary-table td {
+            padding: 3px;
+        }
+
+        .face-auth-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+            display: none;
+        }
+
+        .face-video-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        #face-video {
+            width: 100%;
+            height: 300px;
+            border: 3px solid #007bff;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .face-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .face-status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .face-detected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .face-not-detected {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .face-verified {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .face-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .similarity-display {
+            font-size: 1.2em;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .face-controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .face-controls button {
+            margin: 0 10px;
+        }
+
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .face-init-status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .face-init-loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .face-init-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .face-init-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .face-init-disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #9b4dca;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        .photo-thumbnail {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid #28a745;
+            transition: transform 0.2s ease;
+        }
+
+        .photo-thumbnail:hover {
+            transform: scale(1.1);
+            border-color: #007bff;
+        }
+
+        .photo-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+        }
+
+        .photo-link {
+            font-size: 0.8em;
+            color: #007bff;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .photo-link:hover {
+            text-decoration: underline;
+        }
+
+        .no-photo {
+            color: #999;
+            font-style: italic;
+            font-size: 0.8em;
+        }
+
+        .photo-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .photo-popup-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+            text-align: center;
+        }
+
+        .photo-popup img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+        }
+
+        .photo-popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            background: white;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-popup-close:hover {
+            color: #000;
+            background: #f0f0f0;
+        }
+
+        .photo-preview {
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .photo-preview img {
+            max-width: 200px;
+            height: auto;
+            border-radius: 8px;
+            border: 2px solid #28a745;
+        }
+
+        .photo-capture-status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            display: none;
+            text-align: center;
+        }
+
+        .photo-capturing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .photo-captured {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .photo-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .login-form input:focus {
+            border-color: #9b4dca;
+            outline: none;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 12px;
+            background-color: #9b4dca;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .login-form button:hover {
+            background-color: #8a3ab9;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+
+        /* 編集モード用スタイル */
+        .edit-mode-row {
+            background-color: #fff3cd !important;
+        }
+
+        .view-mode-field {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            cursor: not-allowed;
+        }
+
+        .edit-mode-field {
+            background-color: white;
+            border: 2px solid #007bff;
+        }
+
+        .button-edit {
+            background-color: #17a2b8;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .button-edit:hover {
+            background-color: #138496;
+        }
+
+        .button-update {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .button-update:hover {
+            background-color: #218838;
+        }
+
+        .button-cancel {
+            background-color: #6c757d;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .button-cancel:hover {
+            background-color: #5a6268;
+        }
+
+        .button-delete {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.85em;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .button-delete:hover {
+            background-color: #c82333;
+        }
+
+        @media (max-width: 768px) {
+            .form-inline {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-inline .form-group {
+                margin-bottom: 10px;
+            }
+
+            .photo-cell {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div id="login-section">
+            <div class="login-container">
+                <h1 class="login-title">管理者ログイン</h1>
+                
+                {% if login_error %}
+                <div class="error-message">{{ login_error }}</div>
+                {% endif %}
+                
+                <form action="{{ url_for('admin_login') }}" method="post" class="login-form">
+                    <div class="form-group">
+                        <label for="username">ユーザー名:</label>
+                        <input type="text" id="username" name="username" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">パスワード:</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit">ログイン</button>
+                </form>
+                
+                <div class="login-options">
+                    <a href="#" onclick="showForgotPasswordModal(); return false;">パスワードを忘れた方はこちら</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-admin-section" style="display: none;">
+            <div class="admin-header">
+                <h1>勤怠管理システム</h1>
+                <div>
+                    <button onclick="showChangePasswordModal()"><i class="fas fa-key"></i> パスワード変更</button>
+                    <a href="/logout">ログアウト</a>
+                </div>
+            </div>
+
+            <div id="face-init-status" class="face-init-status face-init-loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <div>顔認証システムを初期化中...</div>
+            </div>
+
+            <div class="settings-panel">
+                <h3>システム設定</h3>
+                <div class="setting-item">
+                    <span>顔認証機能を有効にする</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="faceAuthEnabled" checked onchange="toggleFaceAuth()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span>音声フィードバック</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="voiceEnabled" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <h2>従業員管理</h2>
+            <div class="button-group">
+                <button onclick="showAddEmployeeModal()"><i class="fas fa-plus"></i> 従業員追加</button>
+                <a href="/api/employees/export-csv"><button><i class="fas fa-file-csv"></i> 従業員データCSV</button></a>
+                <a href="/api/employees/export-excel"><button><i class="fas fa-file-excel"></i> 従業員データExcel</button></a>
+                <button onclick="generateAllQRCodes()"><i class="fas fa-qrcode"></i> QRコード一括生成</button>
+                <button onclick="showFaceRegistrationModal()"><i class="fas fa-user-plus"></i> 顔データ登録</button>
+            </div>
+
+            <table id="employee-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>氏名</th>
+                        <th>所属工場</th>
+                        <th>雇用形態</th>
+                        <th>顔データ</th>
+                        <th>QRコード</th>
+                        <th>アクション</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <hr>
+
+            <h2>勤怠記録(日別サマリー)</h2>
+            <div class="form-group">
+                <label for="date-picker">日付を選択:</label>
+                <input type="date" id="date-picker">
+            </div>
+            <div class="button-group">
+                <button id="export-timecard-csv"><i class="fas fa-file-csv"></i> 勤怠記録CSV</button>
+                <button id="export-timecard-excel"><i class="fas fa-file-excel"></i> 勤怠記録Excel</button>
+                <button onclick="exportMonthlyReport()"><i class="fas fa-calendar-alt"></i> 月次レポートExcel</button>
+            </div>
+
+            <table id="daily-summary-table">
+                <thead>
+                    <tr>
+                        <th>従業員ID</th>
+                        <th>氏名</th>
+                        <th>出勤時刻</th>
+                        <th>退勤時刻</th>
+                        <th>退出時刻</th>
+                        <th>戻り時刻</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <hr>
+
+            <h2>手動打刻</h2>
+            <form id="manual-punch-form">
+                <div class="form-inline">
+                    <div class="form-group">
+                        <label for="manual_employee_id">従業員ID:</label>
+                        <input type="text" id="manual_employee_id" name="manual_employee_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manual_action">アクション:</label>
+                        <select id="manual_action" name="manual_action" required>
+                            <option value="in">出勤</option>
+                            <option value="out">退勤</option>
+                            <option value="out_personal">退出</option>
+                            <option value="in_personal">戻り</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manual_date">日付:</label>
+                        <input type="date" id="manual_date" name="manual_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="manual_time">時刻:</label>
+                        <input type="time" id="manual_time" name="manual_time">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit"><i class="fas fa-clock"></i> 打刻登録</button>
+                    </div>
+                </div>
+                <small style="color: #666;">※日付・時刻を空欄にすると現在時刻で登録されます</small>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 従業員追加モーダル -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddEmployeeModal()">&times;</span>
+            <h3>従業員追加</h3>
+            <form id="add-employee-form">
+                <div class="form-group">
+                    <label for="employee_id">従業員ID:</label>
+                    <input type="text" id="employee_id" name="employee_id" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">氏名:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="factory">所属工場:</label>
+                    <select id="factory" name="factory" required>
+                        <option value="">選択してください</option>
+                        <option value="大野">大野</option>
+                        <option value="滋賀">滋賀</option>
+                        <option value="神戸">神戸</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="employment_type">雇用形態:</label>
+                    <select id="employment_type" name="employment_type" required>
+                        <option value="">選択してください</option>
+                        <option value="正社員">正社員</option>
+                        <option value="パート">パート</option>
+                        <option value="外国人実習生">外国人実習生</option>
+                    </select>
+                </div>
+                <button type="submit">追加</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 顔データ登録モーダル -->
+    <div id="faceRegistrationModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" onclick="closeFaceRegistrationModal()">&times;</span>
+            <h3>顔データ登録</h3>
+            <div class="form-group">
+                <label for="face_employee_id">従業員ID:</label>
+                <input type="text" id="face_employee_id" required>
+                <button onclick="verifyEmployee()" style="margin-left: 10px;">確認</button>
+            </div>
+            <div id="employee-info"
+                style="display: none; margin: 10px 0; padding: 10px; background-color: #e9ecef; border-radius: 5px;">
+                <strong id="employee-name"></strong> の顔データを登録します
+            </div>
+
+            <div id="face-auth-section" class="face-auth-section">
+                <h4>顔をカメラに向けてください</h4>
+                <div class="face-video-container">
+                    <video id="face-video" autoplay muted playsinline></video>
+                    <canvas id="face-overlay" class="face-overlay"></canvas>
+                </div>
+                <div id="face-status" class="face-status face-not-detected">
+                    顔を検出中...
+                </div>
+                <div id="similarity-display" class="similarity-display"></div>
+
+                <div id="photo-capture-status" class="photo-capture-status">
+                    写真を撮影中...
+                </div>
+
+                <div id="photo-preview" class="photo-preview">
+                    <div>撮影された写真:</div>
+                    <img id="captured-photo" alt="撮影写真" onclick="showPhotoInPopup(this.src)">
+                </div>
+
+                <div class="face-controls">
+                    <button id="capture-face-btn" onclick="captureFaceData()" disabled class="button">
+                        <i class="fas fa-camera"></i> 顔データ登録
+                    </button>
+                    <button onclick="startFaceCapture()" class="button button-outline">
+                        <i class="fas fa-play"></i> カメラ開始
+                    </button>
+                    <button onclick="stopFaceCapture()" class="button button-outline">
+                        <i class="fas fa-stop"></i> カメラ停止
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- パスワード変更モーダル -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeChangePasswordModal()">&times;</span>
+            <h3>パスワード変更</h3>
+            <form id="change-password-form">
+                <div class="form-group">
+                    <label for="old_password">現在のパスワード:</label>
+                    <input type="password" id="old_password" name="old_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">新しいパスワード:</label>
+                    <input type="password" id="new_password" name="new_password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_new_password">新しいパスワード(確認):</label>
+                    <input type="password" id="confirm_new_password" name="confirm_new_password" required minlength="6">
+                </div>
+                <button type="submit">パスワード変更</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- パスワード忘れモーダル -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeForgotPasswordModal()">&times;</span>
+            <h3>パスワードリセット</h3>
+            <form id="forgot-password-form">
+                <div class="form-group">
+                    <label for="forgot_username">ユーザー名:</label>
+                    <input type="text" id="forgot_username" name="forgot_username" required>
+                </div>
+                <button type="submit">リセットURL生成</button>
+            </form>
+            <div id="reset-url-display" style="display: none; margin-top: 15px;">
+                <p style="color: #28a745; font-weight: bold;">リセットURLを生成しました:</p>
+                <textarea id="reset-url-text" readonly style="width: 100%; height: 80px; margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                <p style="font-size: 0.9em; color: #666;">このURLをコピーして新しいタブで開いてください。URLは1時間で有効期限が切れます。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 詳細表示モーダル(編集モード対応版) -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content" style="max-width: 95%; width: 1200px;">
+            <span class="close" onclick="closeDetailModal()">&times;</span>
+            <h3 id="detail-title">詳細表示</h3>
+            <div class="button-group" style="margin-bottom: 15px;">
+                <button id="bulk-delete-btn" class="danger-button" onclick="bulkDeleteTimecard()">
+                    <i class="fas fa-trash-alt"></i> この日の全打刻を削除
+                </button>
+            </div>
+            <table id="detail-table">
+                <thead>
+                    <tr>
+                        <th>時刻</th>
+                        <th>アクション</th>
+                        <th>場所</th>
+                        <th>写真</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 写真ポップアップモーダル -->
+    <div id="photo-popup" class="photo-popup">
+        <div class="photo-popup-content">
+            <span class="photo-popup-close" onclick="closePhotoPopup()">&times;</span>
+            <h3>打刻写真</h3>
+            <img id="popup-photo" alt="打刻写真">
+            <div style="margin-top: 15px; text-align: center;">
+                <button onclick="closePhotoPopup()" class="button">閉じる</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // グローバル変数の宣言
+        let fetchEmployees, fetchDailySummary;
+        let currentDetailEmployeeId = '';
+        let currentDetailDate = '';
+        let faceApiLoaded = false;
+        let faceDetectionInterval = null;
+        let currentFaceDescriptor = null;
+        let faceCanvas = null;
+        let faceCtx = null;
+        let faceApiInitialized = false;
+        let faceAuthInProgress = false;
+        let faceAuthCompleted = false;
+        let lastCapturedPhoto = null;
+
+        // 編集モード管理用のオブジェクト
+        const editModeData = {};
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('DOMContentLoaded: admin.html初期化開始');
+
+            // 関数定義
+            fetchEmployees = async () => {
+                try {
+                    const response = await fetch('/api/employees');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const employees = await response.json();
+                    const tableBody = document.querySelector('#employee-table tbody');
+                    tableBody.innerHTML = '';
+                    employees.forEach(emp => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                    <td>${emp.employee_id}</td>
+                    <td>${emp.name}</td>
+                    <td>${emp.factory || ''}</td>
+                    <td>${emp.employment_type || ''}</td>
+                    <td>
+                        <span id="face-status-${emp.employee_id}">
+                            <i class="fas fa-question-circle" style="color: #ffc107;"></i> 未確認
+                        </span>
+                    </td>
+                    <td><a href="/qr/${emp.employee_id}" target="_blank">QRコード表示</a></td>
+                    <td>
+                        <button class="button-small button-outline" onclick="deleteEmployee(${emp.id})"><i class="fas fa-trash-alt"></i> 削除</button>
+                        <button class="button-small button-outline" onclick="regenerateQrCode(${emp.id})"><i class="fas fa-sync-alt"></i> QR再生成</button>
+                        <button class="button-small button-outline" onclick="registerFaceData('${emp.employee_id}')"><i class="fas fa-user-plus"></i> 顔登録</button>
+                    </td>
+                `;
+                    });
+
+                    await checkFaceDataStatus();
+                } catch (error) {
+                    console.error('従業員データの取得エラー:', error);
+                    alert('従業員データの取得中にエラーが発生しました');
+                }
+            };
+
+            fetchDailySummary = async () => {
+                const date = document.getElementById('date-picker').value;
+                if (!date) return;
+
+                try {
+                    const response = await fetch(`/api/timecard/daily-summary?date=${date}`);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const summaries = await response.json();
+                    const tableBody = document.querySelector('#daily-summary-table tbody');
+                    tableBody.innerHTML = '';
+
+                    summaries.forEach(summary => {
+                        const row = tableBody.insertRow();
+                        row.innerHTML = `
+                    <td>${summary.employee_id || ''}</td>
+                    <td>${summary.name || ''}</td>
+                    <td>${summary.check_in || ''}</td>
+                    <td>${summary.check_out || ''}</td>
+                    <td>${summary.exit_time || ''}</td>
+                    <td>${summary.return_time || ''}</td>
+                    <td>
+                        <button class="button-small" onclick="showDetailModal('${summary.employee_id}', '${date}')">
+                            <i class="fas fa-eye"></i> 詳細
+                        </button>
+                    </td>
+                `;
+                    });
+                } catch (error) {
+                    console.error('勤怠記録の取得エラー:', error);
+                    alert('勤怠記録の取得中にエラーが発生しました');
+                }
+            };
+
+            const checkLogin = async () => {
+                try {
+                    const response = await fetch('/is_logged_in');
+                    const data = await response.json();
+                    if (data.is_logged_in) {
+                        document.getElementById('login-section').style.display = 'none';
+                        document.getElementById('main-admin-section').style.display = 'block';
+                        await fetchEmployees();
+                        
+                        const today = new Date();
+                        const year = today.getFullYear();
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        const day = String(today.getDate()).padStart(2, '0');
+                        const todayString = `${year}-${month}-${day}`;
+                        document.getElementById('date-picker').value = todayString;
+                        
+                        await fetchDailySummary();
+
+                        setTimeout(() => {
+                            initializeFaceApi();
+                        }, 1000);
+                    } else {
+                        document.getElementById('login-section').style.display = 'block';
+                        document.getElementById('main-admin-section').style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('ログイン状態確認エラー:', error);
+                }
+            };
+
+            setupEventListeners();
+            checkLogin();
+        });
+
+        function updateFaceInitStatus(status, message) {
+            const statusDiv = document.getElementById('face-init-status');
+            if (!statusDiv) return;
+
+            statusDiv.className = `face-init-status face-init-${status}`;
+            statusDiv.style.display = 'block';
+
+            if (status === 'loading') {
+                statusDiv.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div>${message}</div>
+        `;
+            } else {
+                statusDiv.innerHTML = `<div>${message}</div>`;
+            }
+
+            if (status === 'success' || status === 'disabled') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function initializeFaceApi() {
+            try {
+                console.log('=== face-api.js初期化開始(admin) ===');
+                updateFaceInitStatus('loading', '顔認証ライブラリを読み込み中...');
+
+                let attempts = 0;
+                const maxAttempts = 30;
+
+                while (typeof faceapi === 'undefined' && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    attempts++;
+                }
+
+                if (typeof faceapi === 'undefined') {
+                    console.error('face-api.jsの読み込みに失敗しました');
+                    updateFaceInitStatus('error', '顔認証ライブラリの読み込みに失敗しました');
+                    return;
+                }
+
+                updateFaceInitStatus('loading', 'モデルファイルを読み込み中...');
+
+                try {
+                    const modelBaseUrl = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(modelBaseUrl),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(modelBaseUrl),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(modelBaseUrl)
+                    ]);
+
+                    faceApiLoaded = true;
+                    faceApiInitialized = true;
+
+                    console.log('=== face-api.js初期化完了(admin) ===');
+                    updateFaceInitStatus('success', '顔認証システムが利用可能になりました');
+
+                } catch (modelError) {
+                    console.warn('CDNからのモデル読み込み失敗、代替手段を試行中...', modelError);
+
+                    try {
+                        updateFaceInitStatus('loading', '代替方法でモデル読み込み中...');
+
+                        await Promise.all([
+                            faceapi.nets.tinyFaceDetector.loadFromUri('/static/models'),
+                            faceapi.nets.faceLandmark68Net.loadFromUri('/static/models'),
+                            faceapi.nets.faceRecognitionNet.loadFromUri('/static/models')
+                        ]);
+
+                        faceApiLoaded = true;
+                        faceApiInitialized = true;
+
+                        console.log('代替方法でface-api.js初期化完了');
+                        updateFaceInitStatus('success', '顔認証システムが利用可能になりました(ローカルモデル使用)');
+
+                    } catch (localError) {
+                        console.error('ローカルモデル読み込みも失敗:', localError);
+
+                        faceApiLoaded = false;
+                        faceApiInitialized = false;
+                        document.getElementById('faceAuthEnabled').checked = false;
+
+                        updateFaceInitStatus('disabled', '顔認証機能は無効化されました(モデル読み込み失敗)');
+                        console.log('顔認証機能を無効化しました。通常の管理機能は利用可能です。');
+                    }
+                }
+
+            } catch (error) {
+                console.error('face-api.js初期化エラー:', error);
+                updateFaceInitStatus('error', `顔認証初期化エラー: ${error.message}`);
+                faceApiLoaded = false;
+                faceApiInitialized = false;
+                document.getElementById('faceAuthEnabled').checked = false;
+            }
+        }
+
+        function toggleFaceAuth() {
+            const enabled = document.getElementById('faceAuthEnabled').checked;
+            console.log('顔認証設定:', enabled ? '有効' : '無効');
+
+            if (!enabled) {
+                if (!confirm('顔認証を無効にしますか?セキュリティが低下する可能性があります。')) {
+                    document.getElementById('faceAuthEnabled').checked = true;
+                    return;
+                }
+            }
+        }
+
+        async function checkFaceDataStatus() {
+            try {
+                const response = await fetch('/api/face/status');
+                if (response.ok) {
+                    const statusData = await response.json();
+
+                    Object.keys(statusData).forEach(employeeId => {
+                        const statusElement = document.getElementById(`face-status-${employeeId}`);
+                        if (statusElement) {
+                            const hasData = statusData[employeeId];
+                            if (hasData) {
+                                statusElement.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> 登録済み';
+                            } else {
+                                statusElement.innerHTML = '<i class="fas fa-times-circle" style="color: #dc3545;"></i> 未登録';
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('顔データ状態確認エラー:', error);
+            }
+        }
+
+        function showFaceRegistrationModal() {
+            document.getElementById('faceRegistrationModal').style.display = 'block';
+        }
+
+        function closeFaceRegistrationModal() {
+            document.getElementById('faceRegistrationModal').style.display = 'none';
+            stopFaceCapture();
+            resetFaceRegistrationForm();
+        }
+
+        function resetFaceRegistrationForm() {
+            document.getElementById('face_employee_id').value = '';
+            document.getElementById('employee-info').style.display = 'none';
+            document.getElementById('face-auth-section').style.display = 'none';
+            document.getElementById('photo-capture-status').style.display = 'none';
+            document.getElementById('photo-preview').style.display = 'none';
+
+            faceAuthInProgress = false;
+            faceAuthCompleted = false;
+            lastCapturedPhoto = null;
+            currentFaceDescriptor = null;
+        }
+
+        function registerFaceData(employeeId) {
+            document.getElementById('face_employee_id').value = employeeId;
+            showFaceRegistrationModal();
+            verifyEmployee();
+        }
+
+        async function verifyEmployee() {
+            const employeeId = document.getElementById('face_employee_id').value.trim();
+            if (!employeeId) {
+                alert('従業員IDを入力してください');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/employees');
+                const employees = await response.json();
+                const employee = employees.find(emp => emp.employee_id === employeeId);
+
+                if (employee) {
+                    document.getElementById('employee-name').textContent = employee.name;
+                    document.getElementById('employee-info').style.display = 'block';
+                    document.getElementById('face-auth-section').style.display = 'block';
+                } else {
+                    alert('該当する従業員が見つかりません');
+                    document.getElementById('employee-info').style.display = 'none';
+                    document.getElementById('face-auth-section').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('従業員確認エラー:', error);
+                alert('従業員確認中にエラーが発生しました');
+            }
+        }
+
+        async function startFaceCapture() {
+            if (!faceApiInitialized) {
+                alert('顔認証システムが初期化されていません。しばらく待ってから再度お試しください。');
+                return;
+            }
+
+            if (faceAuthInProgress) {
+                console.log('顔認証が既に進行中です');
+                return;
+            }
+
+            try {
+                console.log('顔認証カメラ開始');
+                faceAuthInProgress = true;
+                faceAuthCompleted = false;
+                lastCapturedPhoto = null;
+
+                const faceVideoElement = document.getElementById('face-video');
+                faceCanvas = document.getElementById('face-overlay');
+                faceCtx = faceCanvas.getContext('2d');
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+
+                faceVideoElement.srcObject = stream;
+
+                faceVideoElement.addEventListener('loadedmetadata', () => {
+                    faceCanvas.width = faceVideoElement.offsetWidth;
+                    faceCanvas.height = faceVideoElement.offsetHeight;
+                    console.log('ビデオメタデータ読み込み完了');
+                });
+
+                await startFaceDetection();
+
+            } catch (error) {
+                console.error('カメラ起動エラー:', error);
+                alert('カメラの起動に失敗しました');
+                faceAuthInProgress = false;
+                closeFaceRegistrationModal();
+            }
+        }
+
+        function stopFaceCapture() {
+            console.log('顔認証カメラ停止');
+
+            faceAuthInProgress = false;
+
+            if (faceDetectionInterval) {
+                clearInterval(faceDetectionInterval);
+                faceDetectionInterval = null;
+            }
+
+            if (faceCtx && faceCanvas) {
+                faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+            }
+
+            const faceVideoElement = document.getElementById('face-video');
+            if (faceVideoElement && faceVideoElement.srcObject) {
+                faceVideoElement.srcObject.getTracks().forEach(track => track.stop());
+                faceVideoElement.srcObject = null;
+            }
+
+            updateFaceStatus(false, 0);
+        }
+
+        async function startFaceDetection() {
+            if (!faceApiInitialized || !faceAuthInProgress) return;
+
+            console.log('顔検出開始');
+            const faceVideoElement = document.getElementById('face-video');
+
+            faceDetectionInterval = setInterval(async () => {
+                try {
+                    if (!faceAuthInProgress || faceAuthCompleted) {
+                        console.log('顔認証完了済み、検出停止');
+                        clearInterval(faceDetectionInterval);
+                        return;
+                    }
+
+                    const detection = await faceapi
+                        .detectSingleFace(faceVideoElement, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+
+                    if (faceCtx && faceCanvas) {
+                        faceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+                    }
+
+                    if (detection) {
+                        const box = detection.detection.box;
+                        const scaleX = faceCanvas.width / faceVideoElement.videoWidth;
+                        const scaleY = faceCanvas.height / faceVideoElement.videoHeight;
+
+                        faceCtx.strokeStyle = '#00ff00';
+                        faceCtx.lineWidth = 3;
+                        faceCtx.strokeRect(
+                            box.x * scaleX,
+                            box.y * scaleY,
+                            box.width * scaleX,
+                            box.height * scaleY
+                        );
+
+                        currentFaceDescriptor = detection.descriptor;
+                        updateFaceStatus(true, 1.0);
+                    } else {
+                        currentFaceDescriptor = null;
+                        updateFaceStatus(false, 0);
+                    }
+                } catch (error) {
+                    console.error('顔検出エラー:', error);
+                    stopFaceCapture();
+                    alert('顔検出中にエラーが発生しました。最初からやり直してください。');
+                }
+            }, 500);
+        }
+
+        function updateFaceStatus(detected, confidence) {
+            if (faceAuthCompleted) return;
+
+            const statusDiv = document.getElementById('face-status');
+            const captureBtn = document.getElementById('capture-face-btn');
+
+            if (detected) {
+                statusDiv.textContent = '✅ 顔を検出しました';
+                statusDiv.className = 'face-status face-detected';
+                if (captureBtn) captureBtn.disabled = false;
+            } else {
+                statusDiv.textContent = '😊 顔を検出中...';
+                statusDiv.className = 'face-status face-not-detected';
+                if (captureBtn) captureBtn.disabled = true;
+            }
+        }
+
+        async function captureFaceData() {
+            if (!currentFaceDescriptor || faceAuthCompleted) {
+                alert('顔が検出されていません');
+                return;
+            }
+
+            const employeeId = document.getElementById('face_employee_id').value.trim();
+            if (!employeeId) {
+                alert('従業員IDが設定されていません');
+                return;
+            }
+
+            try {
+                console.log('顔データ登録処理開始');
+
+                faceAuthCompleted = true;
+                if (faceDetectionInterval) {
+                    clearInterval(faceDetectionInterval);
+                }
+
+                updatePhotoCaptureStatus('capturing', '写真を撮影中...');
+                const photoData = await capturePhotoFromVideo();
+
+                if (photoData) {
+                    lastCapturedPhoto = photoData;
+                    updatePhotoCaptureStatus('captured', '写真撮影完了');
+                    showPhotoPreview(photoData);
+
+                    setTimeout(() => {
+                        showPhotoInPopup(photoData);
+                    }, 500);
+                }
+
+                const response = await fetch('/api/face/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        face_descriptor: Array.from(currentFaceDescriptor),
+                        photo: photoData
+                    })
+                });
+
+                const result = await response.json();
+                alert(result.message);
+
+                if (result.success) {
+                    setTimeout(() => {
+                        closeFaceRegistrationModal();
+                    }, 2000);
+                    await fetchEmployees();
+                } else {
+                    faceAuthCompleted = false;
+                    if (faceAuthInProgress) {
+                        startFaceDetection();
+                    }
+                }
+
+            } catch (error) {
+                console.error('顔データ登録エラー:', error);
+                alert('顔データ登録中にエラーが発生しました');
+
+                faceAuthCompleted = false;
+                if (faceAuthInProgress) {
+                    startFaceDetection();
+                }
+            }
+        }
+        
+        function capturePhotoFromVideo() {
+            return new Promise((resolve) => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    const video = document.getElementById('face-video');
+
+                    if (!video || !video.videoWidth || video.readyState < 2) {
+                        console.error('ビデオが準備されていません');
+                        resolve(null);
+                        return;
+                    }
+
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    const context = canvas.getContext('2d');
+
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    if (faceCanvas && currentFaceDescriptor && faceCtx) {
+                        try {
+                            const imageData = faceCtx.getImageData(0, 0, faceCanvas.width, faceCanvas.height);
+                            let hasContent = false;
+                            for (let i = 3; i < imageData.data.length; i += 4) {
+                                if (imageData.data[i] > 0) {
+                                    hasContent = true;
+                                    break;
+                                }
+                            }
+
+                            if (hasContent) {
+                                const tempCanvas = document.createElement('canvas');
+                                tempCanvas.width = faceCanvas.width;
+                                tempCanvas.height = faceCanvas.height;
+                                const tempCtx = tempCanvas.getContext('2d');
+                                tempCtx.putImageData(imageData, 0, 0);
+
+                                context.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+                                console.log('顔検出枠を写真に合成しました');
+                            }
+                        } catch (overlayError) {
+                            console.warn('顔検出枠合成エラー:', overlayError);
+                        }
+                    }
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+                    if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 1000) {
+                        console.error('写真データ生成に失敗');
+                        resolve(null);
+                        return;
+                    }
+
+                    console.log('写真撮影成功:', Math.round(dataUrl.length / 1024) + 'KB');
+                    resolve(dataUrl);
+
+                } catch (error) {
+                    console.error('写真撮影エラー:', error);
+                    resolve(null);
+                }
+            });
+        }
+
+        function updatePhotoCaptureStatus(status, message) {
+            const statusDiv = document.getElementById('photo-capture-status');
+            if (statusDiv) {
+                statusDiv.className = `photo-capture-status photo-${status}`;
+                statusDiv.textContent = message;
+                statusDiv.style.display = 'block';
+
+                console.log('写真撮影ステータス:', status, '-', message);
+
+                if (status === 'captured' || status === 'failed') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+
+        function showPhotoPreview(photoDataUrl) {
+            if (!photoDataUrl) return;
+
+            const previewDiv = document.getElementById('photo-preview');
+            const imgElement = document.getElementById('captured-photo');
+
+            if (previewDiv && imgElement) {
+                imgElement.src = photoDataUrl;
+                previewDiv.style.display = 'block';
+
+                console.log('写真プレビュー表示完了');
+
+                setTimeout(() => {
+                    previewDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function showPhotoInPopup(photoDataUrl) {
+            if (!photoDataUrl) return;
+
+            const popup = document.getElementById('photo-popup');
+            const popupImg = document.getElementById('popup-photo');
+
+            if (popup && popupImg) {
+                popupImg.src = photoDataUrl;
+                popup.style.display = 'flex';
+
+                console.log('写真ポップアップ表示');
+
+                setTimeout(() => {
+                    closePhotoPopup();
+                }, 5000);
+            }
+        }
+
+        function closePhotoPopup() {
+            const popup = document.getElementById('photo-popup');
+            if (popup) {
+                popup.style.display = 'none';
+                console.log('写真ポップアップ閉じる');
+            }
+        }
+
+        // 詳細表示モーダル表示関数(編集モード対応版)
+        const showDetailModal = async (employeeId, date) => {
+            currentDetailEmployeeId = employeeId;
+            currentDetailDate = date;
+
+            try {
+                const response = await fetch(`/api/timecard/detail?employee_id=${employeeId}&date=${date}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const details = await response.json();
+
+                document.getElementById('detail-title').textContent =
+                    `${details.employee_name} (${employeeId}) - ${date}の詳細`;
+
+                const tableBody = document.querySelector('#detail-table tbody');
+                tableBody.innerHTML = '';
+
+                details.punches.forEach(punch => {
+                    const row = tableBody.insertRow();
+                    const rowId = `row-${punch.id}`;
+                    row.id = rowId;
+
+                    // 元のデータを保存
+                    editModeData[punch.id] = {
+                        timestamp: punch.timestamp,
+                        action: punch.action,
+                        location: punch.location || '',
+                        photo_path: punch.photo_path || ''
+                    };
+
+                    let photoHtml = '<span class="no-photo">なし</span>';
+                    if (punch.photo_path) {
+                        let photoUrl;
+                        if (punch.photo_path.startsWith('static/')) {
+                            photoUrl = `/${punch.photo_path}`;
+                        } else if (punch.photo_path.startsWith('/static/')) {
+                            photoUrl = punch.photo_path;
+                        } else {
+                            photoUrl = `/static/photos/${punch.photo_path.split('/').pop()}`;
+                        }
+                        
+                        photoHtml = `
+                    <div class="photo-cell">
+                        <img src="${photoUrl}" 
+                             class="photo-thumbnail"
+                             alt="打刻写真" 
+                             onclick="showPhotoInPopup('${photoUrl}')" 
+                             title="クリックで拡大表示"
+                             onerror="this.style.display='none'; this.nextSibling.style.display='inline';">
+                        <span style="display:none;" class="no-photo">画像エラー</span>
+                        <a href="${photoUrl}" target="_blank" class="photo-link">
+                            <i class="fas fa-external-link-alt"></i> 新規タブ
+                        </a>
+                    </div>
+                `;
+                    }
+
+                    // 初期状態は表示のみ(編集不可)
+                    row.innerHTML = `
+                <td>
+                    <input type="datetime-local" 
+                           value="${punch.timestamp.replace(' ', 'T')}" 
+                           data-id="${punch.id}" 
+                           data-type="timestamp" 
+                           class="view-mode-field"
+                           disabled
+                           style="width: 180px;">
+                </td>
+                <td>
+                    <select data-id="${punch.id}" 
+                            data-type="action" 
+                            class="view-mode-field"
+                            disabled
+                            style="width: 120px;">
+                        <option value="in" ${punch.action === 'in' ? 'selected' : ''}>出勤</option>
+                        <option value="out" ${punch.action === 'out' ? 'selected' : ''}>退勤</option>
+                        <option value="break_out" ${punch.action === 'break_out' ? 'selected' : ''}>休憩開始</option>
+                        <option value="break_in" ${punch.action === 'break_in' ? 'selected' : ''}>休憩終了</option>
+                        <option value="out_personal" ${punch.action === 'out_personal' ? 'selected' : ''}>退出</option>
+                        <option value="in_personal" ${punch.action === 'in_personal' ? 'selected' : ''}>戻り</option>
+                    </select>
+                </td>
+                <td>${punch.location || ''}</td>
+                <td>${photoHtml}</td>
+                <td>
+                    <button class="button-edit" onclick="startEditMode(${punch.id})">
+                        <i class="fas fa-edit"></i> 編集
+                    </button>
+                    <button class="button-delete" onclick="deleteTimecard(${punch.id})">
+                        <i class="fas fa-trash-alt"></i> 削除
+                    </button>
+                </td>
+            `;
+                });
+
+                document.getElementById('detailModal').style.display = 'block';
+
+            } catch (error) {
+                console.error('詳細取得エラー:', error);
+                alert('詳細情報の取得中にエラーが発生しました');
+            }
+        };
+
+        // 編集モード開始関数
+        function startEditMode(punchId) {
+            const row = document.getElementById(`row-${punchId}`);
+            if (!row) return;
+
+            // 行を編集モードのハイライトに
+            row.classList.add('edit-mode-row');
+
+            // 入力フィールドを有効化して編集可能にする
+            const timestampField = row.querySelector(`[data-id="${punchId}"][data-type="timestamp"]`);
+            const actionField = row.querySelector(`[data-id="${punchId}"][data-type="action"]`);
+
+            if (timestampField) {
+                timestampField.disabled = false;
+                timestampField.classList.remove('view-mode-field');
+                timestampField.classList.add('edit-mode-field');
+            }
+
+            if (actionField) {
+                actionField.disabled = false;
+                actionField.classList.remove('view-mode-field');
+                actionField.classList.add('edit-mode-field');
+            }
+
+            // ボタンを更新・中止・削除に変更
+            const actionCell = row.cells[row.cells.length - 1];
+            actionCell.innerHTML = `
+                <button class="button-update" onclick="updateTimecard(${punchId})">
+                    <i class="fas fa-save"></i> 更新
+                </button>
+                <button class="button-cancel" onclick="cancelEditMode(${punchId})">
+                    <i class="fas fa-times"></i> 中止
+                </button>
+                <button class="button-delete" onclick="deleteTimecard(${punchId})">
+                    <i class="fas fa-trash-alt"></i> 削除
+                </button>
+            `;
+
+            console.log(`編集モード開始: ID ${punchId}`);
+        }
+
+        // 編集モードキャンセル関数
+        function cancelEditMode(punchId) {
+            const row = document.getElementById(`row-${punchId}`);
+            if (!row) return;
+
+            // 行のハイライトを解除
+            row.classList.remove('edit-mode-row');
+
+            // 元のデータに戻す
+            const originalData = editModeData[punchId];
+            if (!originalData) return;
+
+            const timestampField = row.querySelector(`[data-id="${punchId}"][data-type="timestamp"]`);
+            const actionField = row.querySelector(`[data-id="${punchId}"][data-type="action"]`);
+
+            if (timestampField) {
+                timestampField.value = originalData.timestamp.replace(' ', 'T');
+                timestampField.disabled = true;
+                timestampField.classList.remove('edit-mode-field');
+                timestampField.classList.add('view-mode-field');
+            }
+
+            if (actionField) {
+                actionField.value = originalData.action;
+                actionField.disabled = true;
+                actionField.classList.remove('edit-mode-field');
+                actionField.classList.add('view-mode-field');
+            }
+
+            // ボタンを元に戻す
+            const actionCell = row.cells[row.cells.length - 1];
+            actionCell.innerHTML = `
+                <button class="button-edit" onclick="startEditMode(${punchId})">
+                    <i class="fas fa-edit"></i> 編集
+                </button>
+                <button class="button-delete" onclick="deleteTimecard(${punchId})">
+                    <i class="fas fa-trash-alt"></i> 削除
+                </button>
+            `;
+
+            console.log(`編集モードキャンセル: ID ${punchId}`);
+        }
+
+        // 更新処理関数(編集モードから呼び出される)
+        const updateTimecard = async (id) => {
+            const row = document.getElementById(`row-${id}`);
+            if (!row) return;
+
+            const timestampField = row.querySelector(`[data-id="${id}"][data-type="timestamp"]`);
+            const actionField = row.querySelector(`[data-id="${id}"][data-type="action"]`);
+
+            if (!timestampField || !actionField) return;
+
+            const newTimestamp = timestampField.value;
+            const newAction = actionField.value;
+
+            // 確認ダイアログ
+            if (!confirm('この打刻情報を更新してもよろしいですか?')) {
+                return;
+            }
+
+            const data = {
+                id: id,
+                timestamp: newTimestamp.replace('T', ' ') + ':00',
+                action: newAction,
+                break_type: null
+            };
+
+            try {
+                const response = await fetch('/api/timecard/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                alert(result.message);
+                
+                if (result.success) {
+                    // 元のデータを更新
+                    editModeData[id] = {
+                        timestamp: data.timestamp,
+                        action: newAction,
+                        location: editModeData[id].location,
+                        photo_path: editModeData[id].photo_path
+                    };
+
+                    // 編集モードを解除
+                    cancelEditMode(id);
+
+                    // サマリーを再読み込み
+                    await fetchDailySummary();
+                }
+            } catch (error) {
+                console.error('勤怠記録更新エラー:', error);
+                alert('勤怠記録更新中にエラーが発生しました');
+            }
+        };
+
+        const deleteTimecard = async (id) => {
+            if (confirm('この打刻情報を削除してもよろしいですか?')) {
+                try {
+                    const response = await fetch(`/api/timecard/delete/${id}`, { method: 'DELETE' });
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        // 編集データから削除
+                        delete editModeData[id];
+
+                        await fetchDailySummary();
+                        if (currentDetailEmployeeId && currentDetailDate) {
+                            await showDetailModal(currentDetailEmployeeId, currentDetailDate);
+                        }
+                    }
+                } catch (error) {
+                    console.error('打刻削除エラー:', error);
+                    alert('打刻削除中にエラーが発生しました');
+                }
+            }
+        };
+
+        const bulkDeleteTimecard = async () => {
+            if (!currentDetailEmployeeId || !currentDetailDate) {
+                alert('従業員IDまたは日付が不正です');
+                return;
+            }
+
+            if (confirm(`${currentDetailDate}の${currentDetailEmployeeId}の全打刻記録を削除してもよろしいですか?\n\nこの操作は取り消しできません。`)) {
+                try {
+                    const response = await fetch('/api/timecard/bulk-delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_id: currentDetailEmployeeId,
+                            date: currentDetailDate
+                        })
+                    });
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        closeDetailModal();
+                        await fetchDailySummary();
+                    }
+                } catch (error) {
+                    console.error('一括削除エラー:', error);
+                    alert('一括削除中にエラーが発生しました');
+                }
+            }
+        };
+
+        const closeDetailModal = () => {
+            document.getElementById('detailModal').style.display = 'none';
+            currentDetailEmployeeId = '';
+            currentDetailDate = '';
+            // 編集データをクリア
+            Object.keys(editModeData).forEach(key => delete editModeData[key]);
+        };
+        
+        function setupEventListeners() {
+            // 日付変更イベント
+            document.getElementById('date-picker').addEventListener('change', fetchDailySummary);
+
+            // 従業員追加フォーム
+            document.getElementById('add-employee-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const data = {
+                    employee_id: form.employee_id.value.trim(),
+                    name: form.name.value.trim(),
+                    factory: form.factory.value,
+                    employment_type: form.employment_type.value,
+                };
+
+                if (!data.employee_id || !data.name || !data.factory || !data.employment_type) {
+                    alert('すべての項目を入力してください');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/employees', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        closeAddEmployeeModal();
+                        form.reset();
+                        await fetchEmployees();
+                    }
+                } catch (error) {
+                    console.error('従業員追加エラー:', error);
+                    alert('従業員追加中にエラーが発生しました');
+                }
+            });
+
+            // パスワード変更フォーム
+            document.getElementById('change-password-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const oldPassword = form.old_password.value;
+                const newPassword = form.new_password.value;
+                const confirmPassword = form.confirm_new_password.value;
+
+                if (newPassword !== confirmPassword) {
+                    alert('新しいパスワードが一致しません');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/admin/change-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            old_password: oldPassword,
+                            new_password: newPassword
+                        })
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        closeChangePasswordModal();
+                        form.reset();
+                    }
+                } catch (error) {
+                    console.error('パスワード変更エラー:', error);
+                    alert('パスワード変更中にエラーが発生しました');
+                }
+            });
+
+            // パスワード忘れフォーム
+            document.getElementById('forgot-password-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const username = form.forgot_username.value.trim();
+
+                if (!username) {
+                    alert('ユーザー名を入力してください');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/admin/forgot-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username })
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+
+                    if (result.success && result.reset_url) {
+                        document.getElementById('reset-url-text').value = result.reset_url;
+                        document.getElementById('reset-url-display').style.display = 'block';
+                        
+                        try {
+                            await navigator.clipboard.writeText(result.reset_url);
+                            console.log('リセットURLをクリップボードにコピーしました');
+                        } catch (clipboardError) {
+                            console.log('クリップボードへのコピーは失敗しましたが、手動でコピーできます');
+                        }
+                        
+                        if (confirm('リセットURLを新しいタブで開きますか?')) {
+                            window.open(result.reset_url, '_blank');
+                        }
+                    }
+                } catch (error) {
+                    console.error('パスワードリセットエラー:', error);
+                    alert('パスワードリセット中にエラーが発生しました');
+                }
+            });
+
+            // 手動打刻フォーム
+            document.getElementById('manual-punch-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = event.target;
+
+                const data = {
+                    employee_id: form.manual_employee_id.value.trim(),
+                    action: form.manual_action.value,
+                    date: form.manual_date.value || null,
+                    time: form.manual_time.value || null
+                };
+
+                try {
+                    const checkResponse = await fetch('/api/timecard/check-consistency', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            employee_id: data.employee_id,
+                            action: data.action,
+                            date: data.date
+                        })
+                    });
+                    const checkResult = await checkResponse.json();
+
+                    if (!checkResult.success) {
+                        alert(`エラー: ${checkResult.message}`);
+                        return;
+                    }
+
+                    const actionNames = {
+                        'in': '出勤', 'out': '退勤',
+                        'out_personal': '退出', 'in_personal': '戻り'
+                    };
+
+                    const confirmMessage = data.date && data.time
+                        ? `${checkResult.employee_name}さんの${actionNames[data.action]}を${data.date} ${data.time}で登録します`
+                        : `${checkResult.employee_name}さんの${actionNames[data.action]}を現在時刻で登録します`;
+
+                    if (!confirm(confirmMessage)) {
+                        return;
+                    }
+
+                } catch (error) {
+                    console.error('整合性チェックエラー:', error);
+                    alert('整合性チェック中にエラーが発生しました');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/timecard/manual', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        form.reset();
+                        await fetchDailySummary();
+                    }
+                } catch (error) {
+                    console.error('手動打刻エラー:', error);
+                    alert('手動打刻中にエラーが発生しました');
+                }
+            });
+
+            // エクスポートボタン
+            document.getElementById('export-timecard-csv').addEventListener('click', () => {
+                const date = document.getElementById('date-picker').value;
+                if (date) {
+                    window.location.href = `/api/timecard/export-csv?date=${date}`;
+                } else {
+                    alert('日付を選択してください');
+                }
+            });
+
+            document.getElementById('export-timecard-excel').addEventListener('click', () => {
+                const date = document.getElementById('date-picker').value;
+                if (date) {
+                    window.location.href = `/api/timecard/export-excel?date=${date}`;
+                } else {
+                    alert('日付を選択してください');
+                }
+            });
+        }
+
+        // その他のグローバル関数
+        const showAddEmployeeModal = () => {
+            document.getElementById('addEmployeeModal').style.display = 'block';
+        };
+
+        const closeAddEmployeeModal = () => {
+            document.getElementById('addEmployeeModal').style.display = 'none';
+            document.getElementById('add-employee-form').reset();
+        };
+
+        const showChangePasswordModal = () => {
+            document.getElementById('changePasswordModal').style.display = 'block';
+        };
+
+        const closeChangePasswordModal = () => {
+            document.getElementById('changePasswordModal').style.display = 'none';
+            document.getElementById('change-password-form').reset();
+        };
+
+        const showForgotPasswordModal = () => {
+            document.getElementById('forgotPasswordModal').style.display = 'block';
+        };
+
+        const closeForgotPasswordModal = () => {
+            document.getElementById('forgotPasswordModal').style.display = 'none';
+            document.getElementById('forgot-password-form').reset();
+            document.getElementById('reset-url-display').style.display = 'none';
+        };
+
+        const deleteEmployee = async (id) => {
+            if (confirm('この従業員を削除してもよろしいですか?')) {
+                try {
+                    const response = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
+                    const result = await response.json();
+                    alert(result.message);
+                    if (result.success) {
+                        await fetchEmployees();
+                    }
+                } catch (error) {
+                    console.error('従業員削除エラー:', error);
+                    alert('従業員削除中にエラーが発生しました');
+                }
+            }
+        };
+
+        const regenerateQrCode = async (id) => {
+            if (confirm('この従業員のQRコードを再生成してもよろしいですか?')) {
+                try {
+                    const response = await fetch(`/api/employees/${id}/regenerate-qr`, { method: 'POST' });
+                    const result = await response.json();
+                    alert(result.message);
+                } catch (error) {
+                    console.error('QRコード再生成エラー:', error);
+                    alert('QRコード再生成中にエラーが発生しました');
+                }
+            }
+        };
+
+        const generateAllQRCodes = async () => {
+            if (confirm('すべての従業員のQRコードを生成してもよろしいですか?')) {
+                try {
+                    const response = await fetch('/api/employees/generate-all-qr', { method: 'POST' });
+                    const result = await response.json();
+                    alert(result.message);
+                } catch (error) {
+                    console.error('QRコード一括生成エラー:', error);
+                    alert('QRコード一括生成中にエラーが発生しました');
+                }
+            }
+        };
+
+        const exportMonthlyReport = () => {
+            const year = prompt("月次レポートを出力する年(YYYY)を入力してください", new Date().getFullYear());
+            if (!year) return;
+            const month = prompt("月次レポートを出力する月(MM)を入力してください", ("0" + (new Date().getMonth() + 1)).slice(-2));
+            if (!month) return;
+            window.location.href = `/api/timecard/monthly-report-excel?year=${year}&month=${month}`;
+        };
+
+        // モーダルの外側クリックで閉じる機能
+        window.addEventListener('click', (event) => {
+            const modals = ['addEmployeeModal', 'faceRegistrationModal', 'changePasswordModal', 'forgotPasswordModal', 'detailModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    if (modalId === 'faceRegistrationModal') {
+                        stopFaceCapture();
+                        resetFaceRegistrationForm();
+                    } else if (modalId === 'forgotPasswordModal') {
+                        document.getElementById('forgot-password-form').reset();
+                        document.getElementById('reset-url-display').style.display = 'none';
+                    } else if (modalId === 'detailModal') {
+                        closeDetailModal();
+                    }
+                }
+            });
+        });
+
+        // ページの可視性変更時の処理
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && faceAuthInProgress) {
+                stopFaceCapture();
+            }
+        });
+    </script>
+</body>
+
+</html>
